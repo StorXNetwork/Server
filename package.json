@@ -43,7 +43,7 @@
     "speakeasy": "^2.0.0",
     "sql-formatter": "^2.3.3",
     "storj": "github:StorXNetwork/node-lib",
-    "storx-service-mailer": "github:StorXtech/mailer",
+    "storx-service-mailer": "github:StorXNetwork/mailer",
     "stripe": "8.49.0",
     "uuid": "^8.3.2",
     "winston": "^3.2.1"
