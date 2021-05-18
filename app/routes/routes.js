@@ -236,7 +236,7 @@ module.exports = (Router, Service, App) => {
         if (uuid.validate(referral)) {
           await Service.User.FindUserByUuid(referral).then((referalUser) => {
             if (referalUser) {
-              newUser.credit = 5;
+              newUser.credit = 10;
               hasReferral = true;
               referrer = referalUser;
               Service.User.UpdateCredit(referral);
