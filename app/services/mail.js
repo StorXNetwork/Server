@@ -10,7 +10,7 @@ module.exports = () => {
         user: process.env.INXT_MAILER_USERNAME,
         pass: process.env.INXT_MAILER_PASSWORD
       },
-      from: 'support@storx.io'
+      from: 'support@storx.tech'
     };
 
     if (process.env.SENDGRID_API_KEY) {
@@ -18,7 +18,6 @@ module.exports = () => {
         api_key: process.env.SENDGRID_API_KEY
       };
     }
-
     return new InternxtMailer(mailConfig);
   };
 

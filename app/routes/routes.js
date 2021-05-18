@@ -336,8 +336,8 @@ module.exports = (Router, Service, App) => {
   Router.post('/user/claim', passportAuth, (req, res) => {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
     const msg = {
-      to: 'support@storx.io',
-      from: 'support@storx.io',
+      to: 'support@storx.tech',
+      from: 'support@storx.tech',
       subject: 'New credit request',
       text: `Hello StorX! I am ready to receive my credit for referring friends. My email is ${req.user.email}`
     };
@@ -360,9 +360,9 @@ module.exports = (Router, Service, App) => {
     Service.User.FindUserObjByEmail(email).then((user) => {
       if (user === null) {
         Service.Mail.sendInvitationMail(email, req.user).then(() => {
-          Logger.info('Usuario %s envia invitación a %s', req.user.email, req.body.email);
+          Logger.info('User %s send invitation to %s', req.user.email, req.body.email);
           res.status(200).send({});
-        }).catch(() => {
+        }).catch((e) => {
           Logger.error('Error: Send mail from %s to %s', req.user.email, req.body.email);
           res.status(200).send({});
         });

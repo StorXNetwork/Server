@@ -170,8 +170,8 @@ module.exports = (Router, Service, App) => {
   Router.post('/teams/deleteAccount', passportAuth, (req, res) => {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
     const msg = {
-      to: 'support@storx.io',
-      from: 'support@storx.io',
+      to: 'support@storx.tech',
+      from: 'support@storx.tech',
       subject: 'Delete Teams Account',
       text: `Hello StorX! I need to delete my team account ${req.user.email}`
     };
