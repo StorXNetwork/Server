@@ -295,7 +295,7 @@ module.exports = (Router, Service, App) => {
         };
 
         try {
-          const familyFolder = await Service.Folder.Create(userData, 'Family', user.root_folder_id);
+          const familyFolder = await Service.Folder.Create(userData, 'Business', user.root_folder_id);
           const personalFolder = await Service.Folder.Create(userData, 'Personal', user.root_folder_id);
           personalFolder.iconId = 1;
           personalFolder.color = 'pink';
