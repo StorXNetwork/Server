@@ -16,7 +16,7 @@ exports.data = {
     JWT: process.env.JWT_SECRET || 'asdf1234',
     CRYPTO: 'asdf1234',
     CAPTCHA: process.env.CAPTCHA_SECRET,
-    CRYPTO_SECRET: process.env.CRYPTO_SECRET || 'ASDFGHJKL1234567',
+    CRYPTO_SECRET: process.env.CRYPTO_SECRET || 'C5eOhTfRoS9wGsHc4Aud',
     STRIPE_SK: process.env.STRIPE_SK,
     CAPTCHA_SECRET: process.env.CAPTCHA_SECRET,
     MAGIC_SALT: process.env.MAGIC_SALT,
