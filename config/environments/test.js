@@ -11,8 +11,8 @@ exports.data = {
   secrets: {
     JWT: 'asdf1234',
     CRYPTO_SECRET: 'asdf1234',
-    MAGIC_IV: 'NwpgsrPeJzwHNp3HRuvWmQAQvdv17zsG',
-    MAGIC_SALT: 'NwpgsrPeJzwHNp3HRuvWmQAQvdv17zsGNwpgsrPeJzwHNp3HRuvWmQAQvdv17zsGNwpgsrPeJzwHNp3HRuvWmQAQvdv17zsGNwpgsrPeJzwHNp3HRuvWmQAQvdv17zsG'
+    MAGIC_IV: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    MAGIC_SALT: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
   },
   logger: {
     level: 0
