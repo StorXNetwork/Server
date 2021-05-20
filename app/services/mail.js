@@ -31,7 +31,7 @@ module.exports = () => {
           template: 'referral',
           go: { in: 'here' },
           senderUser: user.name,
-          url: `https://web.storx.io/?ref=${user.uuid}`
+          url: `https://storx.io/?ref=${user.uuid}`
         },
         (err) => {
           if (!err) {

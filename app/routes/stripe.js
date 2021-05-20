@@ -72,8 +72,8 @@ module.exports = (Router, Service) => {
 
         const sessionParams = {
           payment_method_types: ['card'],
-          success_url: req.body.SUCCESS_URL || 'https://web.storx.io/',
-          cancel_url: req.body.CANCELED_URL || 'https://web.storx.io/',
+          success_url: req.body.SUCCESS_URL || 'https://storx.io/',
+          cancel_url: req.body.CANCELED_URL || 'https://storx.io/',
           subscription_data: {
             items: [{ plan: req.body.plan }]
           },
@@ -236,7 +236,7 @@ module.exports = (Router, Service) => {
   Router.post('/stripe/billing', passportAuth, async (req, res) => {
     const test = req.body.test || false;
     const { email } = req.user;
-    const url = 'https://web.storx.io/';
+    const url = 'https://storx.io/';
 
     Service.Stripe.findCustomerByEmail(email, test).then((customer) => {
       const customerId = customer.id;
