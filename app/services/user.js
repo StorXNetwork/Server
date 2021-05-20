@@ -148,16 +148,16 @@ module.exports = (Model, App) => {
 
   const UpdateCredit = (userUuid) => {
     // Logger.info("€5 added to ", referral);
-    Logger.info('€5 added to user with UUID %s', userUuid);
+    Logger.info('10 added to user with UUID %s', userUuid);
 
-    return Model.users.update({ credit: Sequelize.literal('credit + 5') },
+    return Model.users.update({ credit: Sequelize.literal('credit + 10') },
       { where: { uuid: { [Op.eq]: userUuid } } });
   };
 
   const DecrementCredit = (userUuid) => {
-    Logger.info('€5 decremented to user with UUID %s', userUuid);
+    Logger.info('10 decremented to user with UUID %s', userUuid);
 
-    return Model.users.update({ credit: Sequelize.literal('credit - 5') },
+    return Model.users.update({ credit: Sequelize.literal('credit - 10') },
       { where: { uuid: { [Op.eq]: userUuid } } });
   };
 
