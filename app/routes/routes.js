@@ -2,9 +2,7 @@ const sgMail = require('@sendgrid/mail');
 const speakeasy = require('speakeasy');
 const uuid = require('uuid');
 const Analytics = require('analytics-node');
-
 const analytics = new Analytics(process.env.APP_SEGMENT_KEY);
-
 const openpgp = require('openpgp');
 const ActivationRoutes = require('./activation');
 const StorageRoutes = require('./storage');
@@ -16,10 +14,10 @@ const TwoFactorRoutes = require('./twofactor');
 const ExtraRoutes = require('./extra');
 const AppSumoRoutes = require('./appsumo');
 const PhotosRoutes = require('./photos');
-
 const passport = require('../middleware/passport');
 const TeamsRoutes = require('./teams');
 const logger = require('../../lib/logger');
+const moment = require('moment');
 
 const { passportAuth } = passport;
 
@@ -236,7 +234,7 @@ module.exports = (Router, Service, App) => {
         if (uuid.validate(referral)) {
           await Service.User.FindUserByUuid(referral).then((referalUser) => {
             if (referalUser) {
-              newUser.credit = 10;
+              newUser.credit = 5;
               hasReferral = true;
               referrer = referalUser;
               Service.User.UpdateCredit(referral);
@@ -356,11 +354,16 @@ module.exports = (Router, Service, App) => {
 
   Router.post('/user/invite', passportAuth, (req, res) => {
     const { email } = req.body;
-
+    const expires = moment().add(2, 'days').toDate();
     Service.User.FindUserObjByEmail(email).then((user) => {
       if (user === null) {
         Service.Mail.sendInvitationMail(email, req.user).then(() => {
           Logger.info('User %s send invitation to %s', req.user.email, req.body.email);
+          res.cookie("REFERRAL", req.user.uuid, {
+            expires: expires,
+            overwrite: true,
+            httpOnly: false
+          });
           res.status(200).send({});
         }).catch((e) => {
           Logger.error('Error: Send mail from %s to %s', req.user.email, req.body.email);
