@@ -354,17 +354,12 @@ module.exports = (Router, Service, App) => {
 
   Router.post('/user/invite', passportAuth, (req, res) => {
     const { email } = req.body;
-    const expires = moment().add(2, 'days').toDate();
+
     Service.User.FindUserObjByEmail(email).then((user) => {
       if (user === null) {
         Service.Mail.sendInvitationMail(email, req.user).then(() => {
           Logger.info('User %s send invitation to %s', req.user.email, req.body.email);
-          res.status(200).cookie("REFERRAL", req.user.uuid, {
-            domain: process.env.NODE_ENV === 'production' ? '.storx.io' : 'localhost',
-            expires: expires,
-            overwrite: true,
-            httpOnly: false
-          });
+          res.status(200).send({});
         }).catch((e) => {
           Logger.error('Error: Send mail from %s to %s', req.user.email, req.body.email);
           res.status(200).send({});
