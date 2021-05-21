@@ -216,7 +216,7 @@ module.exports = (Router, Service, App) => {
       Logger.warn('Register request for %s from %s', req.body.email, req.headers['X-Forwarded-For']);
 
       const newUser = req.body;
-      newUser.credit = 0;
+      newUser.credit = 10;
 
       const { referral } = req.body;
 
@@ -295,7 +295,7 @@ module.exports = (Router, Service, App) => {
         };
 
         try {
-          const familyFolder = await Service.Folder.Create(userData, 'Business', user.root_folder_id);
+          const familyFolder = await Service.Folder.Create(userData, 'Family', user.root_folder_id);
           const personalFolder = await Service.Folder.Create(userData, 'Personal', user.root_folder_id);
           personalFolder.iconId = 1;
           personalFolder.color = 'pink';
