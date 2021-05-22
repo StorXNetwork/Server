@@ -219,9 +219,7 @@ module.exports = (Router, Service, App) => {
       newUser.credit = 10;
 
       const { referral } = req.body;
-      if (referral == undefined) {
-        newUser.credit = 0;
-      }
+      if (referral == undefined) newUser.credit = 0;
       let hasReferral = false;
       let referrer = null;
 
