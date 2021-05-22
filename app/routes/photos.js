@@ -21,7 +21,7 @@ module.exports = (Router, Service, App) => {
   Router.get('/photos/initialize', passportAuth, (req, res) => {
     const inputData = {
       email: req.user.email,
-      mnemonic: req.headers['internxt-mnemonic']
+      mnemonic: req.headers['storx-mnemonic']
     };
     Service.UserPhotos.InitializeUserPhotos(inputData).then((userData) => {
       res.status(200).send({ user: userData });
@@ -33,7 +33,7 @@ module.exports = (Router, Service, App) => {
   Router.get('/photos/storage/previews/:id', passportAuth, (req, res) => {
     const { user } = req;
     // Set mnemonic to decrypted mnemonic
-    user.mnemonic = req.headers['internxt-mnemonic'];
+    user.mnemonic = req.headers['storx-mnemonic'];
     const fileIdInBucket = req.params.id;
     if (!fileIdInBucket || fileIdInBucket === 'null') {
       return res.status(500).send({ message: 'Missing photo id' });
@@ -166,7 +166,7 @@ module.exports = (Router, Service, App) => {
 
     const userPhotos = await req.user.getUsersphoto();
     // Set mnemonic to decrypted mnemonic
-    req.user.mnemonic = req.headers['internxt-mnemonic'];
+    req.user.mnemonic = req.headers['storx-mnemonic'];
 
     const photoExists = await Service.Photos.FindPhotoByHash(userPhotos, req.body.hash);
 
@@ -221,7 +221,7 @@ module.exports = (Router, Service, App) => {
       }
 
       // Set mnemonic to decrypted mnemonic
-      userInfo.mnemonic = req.headers['internxt-mnemonic'];
+      userInfo.mnemonic = req.headers['storx-mnemonic'];
 
       Service.Previews.UploadPreview(
         userInfo,
@@ -244,7 +244,7 @@ module.exports = (Router, Service, App) => {
   Router.get('/photos/storage/photo/:id', passportAuth, (req, res) => {
     const { user } = req;
     // Set mnemonic to decrypted mnemonic
-    user.mnemonic = req.headers['internxt-mnemonic'];
+    user.mnemonic = req.headers['storx-mnemonic'];
     const fileIdInBucket = req.params.id;
     if (fileIdInBucket === 'null') {
       return res.status(500).send({ message: 'Missing photo id' });
@@ -276,7 +276,7 @@ module.exports = (Router, Service, App) => {
   Router.get('/photos/download/photo/:photoId', passportAuth, (req, res) => {
     const { user } = req;
     // Set mnemonic to decrypted mnemonic
-    user.mnemonic = req.headers['internxt-mnemonic'];
+    user.mnemonic = req.headers['storx-mnemonic'];
     const { photoId } = req.params;
     if (photoId === 'null') {
       return res.status(500).send({ message: 'Missing photo id' });

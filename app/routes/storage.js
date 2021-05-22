@@ -46,7 +46,7 @@ module.exports = (Router, Service, App) => {
     const { folderName, parentFolderId } = req.body;
 
     const { user } = req;
-    user.mnemonic = req.headers['internxt-mnemonic'];
+    user.mnemonic = req.headers['storx-mnemonic'];
 
     Service.Folder.Create(user, folderName, parentFolderId).then((result) => {
       res.status(201).json(result);
@@ -59,7 +59,7 @@ module.exports = (Router, Service, App) => {
   Router.delete('/storage/folder/:id', passportAuth, (req, res) => {
     const { user } = req;
     // Set mnemonic to decrypted mnemonic
-    user.mnemonic = req.headers['internxt-mnemonic'];
+    user.mnemonic = req.headers['storx-mnemonic'];
     const folderId = req.params.id;
 
     Service.Folder.Delete(user, folderId).then((result) => {
@@ -73,7 +73,7 @@ module.exports = (Router, Service, App) => {
   Router.post('/storage/folder/:id/upload', passportAuth, upload.single('xfile'), (req, res) => {
     const { user } = req;
     // Set mnemonic to decrypted mnemonic
-    user.mnemonic = req.headers['internxt-mnemonic'];
+    user.mnemonic = req.headers['storx-mnemonic'];
     const isValidMnemonic = bip39.validateMnemonic(user.mnemonic);
 
     if (!isValidMnemonic) {
@@ -124,7 +124,7 @@ module.exports = (Router, Service, App) => {
   Router.get('/storage/file/:id', passportAuth, (req, res) => {
     const { user } = req;
     // Set mnemonic to decrypted mnemonic
-    user.mnemonic = req.headers['internxt-mnemonic'];
+    user.mnemonic = req.headers['storx-mnemonic'];
 
     const isValidMnemopnic = bip39.validateMnemonic(user.mnemonic);
 
@@ -225,7 +225,7 @@ module.exports = (Router, Service, App) => {
   Router.post('/storage/share/file/:id', passportAuth, (req, res) => {
     const user = req.user.email;
     const itemId = req.params.id;
-    const mnemonic = req.headers['internxt-mnemonic'];
+    const mnemonic = req.headers['storx-mnemonic'];
     const { isFolder, views } = req.body;
 
     Service.Share.GenerateToken(user, itemId, mnemonic, isFolder, views).then((result) => {

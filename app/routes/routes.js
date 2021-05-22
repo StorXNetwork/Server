@@ -118,7 +118,7 @@ module.exports = (Router, Service, App) => {
 
       if (pass === userData.password.toString() && tfaResult) {
         // Successfull login
-        const internxtClient = req.headers['internxt-client'];
+        const internxtClient = req.headers['storx-client'];
         const token = passport.Sign(userData.email, App.config.get('secrets').JWT, internxtClient === 'drive-web');
 
         Service.User.LoginFailed(req.body.email, false);
@@ -185,7 +185,7 @@ module.exports = (Router, Service, App) => {
     const keys = await Service.KeyServer.getKeys(userData);
     const userBucket = await Service.User.GetUserBucket(userData);
 
-    const internxtClient = req.headers['internxt-client'];
+    const internxtClient = req.headers['storx-client'];
     const token = passport.Sign(userData.email,
       App.config.get('secrets').JWT,
       internxtClient === 'x-cloud-web' || internxtClient === 'drive-web');

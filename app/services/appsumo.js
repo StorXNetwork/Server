@@ -8,11 +8,11 @@ const UserService = require('./user');
 const CryptService = require('./crypt');
 
 const AppSumoTiers = [
-  { name: 'internxt_tier1', size: '500GB' },
-  { name: 'internxt_tier2', size: '1TB' },
-  { name: 'internxt_tier3', size: '2TB' },
-  { name: 'internxt_tier4', size: '3TB' },
-  { name: 'internxt_tier5', size: '5TB' },
+  { name: 'storx_tier1', size: '500GB' },
+  { name: 'storx_tier2', size: '1TB' },
+  { name: 'storx_tier3', size: '2TB' },
+  { name: 'storx_tier4', size: '3TB' },
+  { name: 'storx_tier5', size: '5TB' },
   { name: 'lifetime_2TB', size: '2TB' }
 ];
 

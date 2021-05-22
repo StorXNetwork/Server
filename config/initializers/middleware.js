@@ -83,9 +83,9 @@ module.exports = (App, Config) => {
       'Content-Type',
       'Authorization',
       'method',
-      'internxt-version',
-      'internxt-client',
-      'internxt-mnemonic'],
+      'storx-version',
+      'storx-client',
+      'storx-mnemonic'],
     exposedHeaders: ['sessionId'],
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
@@ -153,7 +153,7 @@ module.exports = (App, Config) => {
       }
     }
 
-    const clientVersion = `[${req.headers['internxt-client']} ${req.headers['internxt-version']}]`.trim();
+    const clientVersion = `[${req.headers['storx-client']} ${req.headers['storx-version']}]`.trim();
     const clientAuth = req.headers.authorization && user;
 
     App.logger.info(`[${req.method}] ${req.originalUrl} ${clientAuth && ` [w/AUTH ${clientAuth}]`} ${clientVersion}`);
