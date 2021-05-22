@@ -215,11 +215,13 @@ module.exports = (Router, Service, App) => {
       req.body.email = req.body.email.toLowerCase().trim();
       Logger.warn('Register request for %s from %s', req.body.email, req.headers['X-Forwarded-For']);
 
-      const newUser = req.body;
+      let newUser = req.body;
       newUser.credit = 10;
 
       const { referral } = req.body;
-
+      if (referral == undefined) {
+        newUser.credit = 0;
+      }
       let hasReferral = false;
       let referrer = null;
 
