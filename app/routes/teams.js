@@ -190,8 +190,8 @@ module.exports = (Router, Service, App) => {
       }
       const userTeam = team.toJSON();
       delete userTeam.id;
-      const internxtClient = req.headers['storx-client'];
-      const tokenTeams = Sign(userTeam.bridge_user, App.config.get('secrets').JWT, internxtClient === 'drive-web');
+      const storxClient = req.headers['storx-client'];
+      const tokenTeams = Sign(userTeam.bridge_user, App.config.get('secrets').JWT, storxClient === 'drive-web');
 
       const user = await Service.User.FindUserByEmail(userTeam.bridge_user);
       userTeam.root_folder_id = user.root_folder_id;

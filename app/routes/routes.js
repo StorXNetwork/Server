@@ -118,8 +118,8 @@ module.exports = (Router, Service, App) => {
 
       if (pass === userData.password.toString() && tfaResult) {
         // Successfull login
-        const internxtClient = req.headers['storx-client'];
-        const token = passport.Sign(userData.email, App.config.get('secrets').JWT, internxtClient === 'drive-web');
+        const storxClient = req.headers['storx-client'];
+        const token = passport.Sign(userData.email, App.config.get('secrets').JWT, storxClient === 'drive-web');
 
         Service.User.LoginFailed(req.body.email, false);
         Service.User.UpdateAccountActivity(req.body.email);
@@ -154,7 +154,7 @@ module.exports = (Router, Service, App) => {
 
         const userTeam = null;
         if (userTeam) {
-          const tokenTeam = passport.Sign(userTeam.bridge_user, App.config.get('secrets').JWT, internxtClient === 'drive-web');
+          const tokenTeam = passport.Sign(userTeam.bridge_user, App.config.get('secrets').JWT, storxClient === 'drive-web');
           return res.status(200).json({
             user, token, userTeam, tokenTeam
           });
@@ -185,10 +185,10 @@ module.exports = (Router, Service, App) => {
     const keys = await Service.KeyServer.getKeys(userData);
     const userBucket = await Service.User.GetUserBucket(userData);
 
-    const internxtClient = req.headers['storx-client'];
+    const storxClient = req.headers['storx-client'];
     const token = passport.Sign(userData.email,
       App.config.get('secrets').JWT,
-      internxtClient === 'x-cloud-web' || internxtClient === 'drive-web');
+      storxClient === 'x-cloud-web' || storxClient === 'drive-web');
 
     const user = {
       userId: userData.userId,

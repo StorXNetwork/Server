@@ -1,4 +1,4 @@
-const InternxtMailer = require('storx-service-mailer');
+const StorxMailer = require('storx-service-mailer');
 
 module.exports = () => {
   const mailInstance = () => {
@@ -18,7 +18,7 @@ module.exports = () => {
         api_key: process.env.SENDGRID_API_KEY
       };
     }
-    return new InternxtMailer(mailConfig);
+    return new StorxMailer(mailConfig);
   };
 
   const sendInvitationMail = (emailTo, user) => {
