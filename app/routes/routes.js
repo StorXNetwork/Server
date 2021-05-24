@@ -99,6 +99,10 @@ module.exports = (Router, Service, App) => {
         return res.status(500).send({ error: 'Your account has been blocked for security reasons. Please reach out to us' });
       }
 
+      if (userData.registerCompleted == false) {
+        return res.status(400).send({ error: 'Please verify your email' });
+      }
+
       // Process user data and answer API call
       const pass = App.services.Crypt.decryptText(req.body.password);
       // 2-Factor Auth. Verification
