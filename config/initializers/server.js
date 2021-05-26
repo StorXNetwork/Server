@@ -26,13 +26,14 @@ class Server {
     this.logger.info(`Starting Server on port ${port}`);
     this.logger.info(`Environment: "${process.env.NODE_ENV}"`);
     this.instance = this.express.listen(port, '0.0.0.0', callback);
+    this.instance.timeout = 240000
     this.initDatabase();
 
     process.on('SIGINT', this.handleSIGINT.bind(this));
     process.on('exit', this.handleExit.bind(this));
     process.on('uncaughtException', this.handleuncaughtException.bind(this));
 
-    this.logger.info(`Server started on port: http://localhost:${port}`);
+    this.logger.info(`API started on: http://localhost:${port}`);
     this.logger.info(`Brigde location: ${this.config.get('STORJ_BRIDGE')}`);
   }
 
@@ -73,7 +74,7 @@ class Server {
   }
 
   initMiddleware(Middleware) {
-    this.logger.info('Initializing middleware');
+    this.logger.info('Initializing middlewares');
     Middleware(this, this.config.get('secrets'));
     this.logger.info('Middleware OK');
   }

@@ -10,17 +10,18 @@ module.exports = (config) => {
     resetAfterUse: true,
     operatorsAliases: 0,
     dialectOptions: {
+      connectTimeout: 30000,
       options: {
-        requestTimeout: 4000
+        requestTimeout: 8000
       }
     },
     pool: {
       maxConnections: Number.MAX_SAFE_INTEGER,
-      maxIdleTime: 30000,
-      max: 20,
+      maxIdleTime: 40000,
+      max: 30,
       min: 0,
-      idle: 20000,
-      acquire: 20000
+      idle: 30000,
+      acquire: 30000
     },
     logging: (content) => {
       const parse = content.match(/^(Executing \(.*\):) (.*)$/);
