@@ -99,6 +99,10 @@ module.exports = (Router, Service, App) => {
         return res.status(500).send({ error: 'Your account has been blocked for security reasons. Please reach out to us' });
       }
 
+      if (userData.registerCompleted == false) {
+        return res.status(400).send({ error: 'Please verify your email' });
+      }
+
       // Process user data and answer API call
       const pass = App.services.Crypt.decryptText(req.body.password);
       // 2-Factor Auth. Verification
@@ -118,8 +122,8 @@ module.exports = (Router, Service, App) => {
 
       if (pass === userData.password.toString() && tfaResult) {
         // Successfull login
-        const storxClient = req.headers['storx-client'];
-        const token = passport.Sign(userData.email, App.config.get('secrets').JWT, storxClient === 'drive-web');
+        const internxtClient = req.headers['storx-client'];
+        const token = passport.Sign(userData.email, App.config.get('secrets').JWT, internxtClient === 'drive-web');
 
         Service.User.LoginFailed(req.body.email, false);
         Service.User.UpdateAccountActivity(req.body.email);
@@ -154,7 +158,7 @@ module.exports = (Router, Service, App) => {
 
         const userTeam = null;
         if (userTeam) {
-          const tokenTeam = passport.Sign(userTeam.bridge_user, App.config.get('secrets').JWT, storxClient === 'drive-web');
+          const tokenTeam = passport.Sign(userTeam.bridge_user, App.config.get('secrets').JWT, internxtClient === 'drive-web');
           return res.status(200).json({
             user, token, userTeam, tokenTeam
           });
@@ -185,10 +189,10 @@ module.exports = (Router, Service, App) => {
     const keys = await Service.KeyServer.getKeys(userData);
     const userBucket = await Service.User.GetUserBucket(userData);
 
-    const storxClient = req.headers['storx-client'];
+    const internxtClient = req.headers['storx-client'];
     const token = passport.Sign(userData.email,
       App.config.get('secrets').JWT,
-      storxClient === 'x-cloud-web' || storxClient === 'drive-web');
+      internxtClient === 'x-cloud-web' || internxtClient === 'drive-web');
 
     const user = {
       userId: userData.userId,
@@ -219,7 +223,9 @@ module.exports = (Router, Service, App) => {
       newUser.credit = 10;
 
       const { referral } = req.body;
-      if (referral == undefined) newUser.credit = 0;
+      if (referral == undefined) {
+        newUser.credit = 0;
+      }
       let hasReferral = false;
       let referrer = null;
 

@@ -63,7 +63,7 @@ module.exports = (Model, App) => {
       // TODO: If the folder already exists,
       // return the folder data to make desktop
       // incorporate new info to its database
-      throw Error('Folder with the same name already exists');
+      return res.status(400).send({ error: 'Folder with the same name already exists.' });
     }
 
     // Since we upload everything in the same bucket, this line is no longer needed
