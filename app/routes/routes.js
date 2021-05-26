@@ -220,13 +220,9 @@ module.exports = (Router, Service, App) => {
       Logger.warn('Register request for %s from %s', req.body.email, req.headers['X-Forwarded-For']);
 
       let newUser = req.body;
-      newUser.credit = 10;
 
       const { referral } = req.body;
-      if (referral == undefined) {
-        newUser.credit = 0;
-      }
-      let hasReferral = false;
+      asReferral = false;
       let referrer = null;
 
       // Call user service to find or create user
@@ -240,7 +236,7 @@ module.exports = (Router, Service, App) => {
         if (uuid.validate(referral)) {
           await Service.User.FindUserByUuid(referral).then((referalUser) => {
             if (referalUser) {
-              newUser.credit = 10;
+              newUser.credit = referral == undefined ? 0 : 10;
               hasReferral = true;
               referrer = referalUser;
               Service.User.UpdateCredit(referral);
