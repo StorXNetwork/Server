@@ -7,10 +7,21 @@ exports.data = {
     user: process.env.RDS_USERNAME,
     password: process.env.RDS_PASSWORD,
     sequelizeConfig: {
-      dialect: 'mariadb',
+      dialect: 'mysql',
       port: 3306,
       host: process.env.RDS_HOSTNAME,
-    }
+    },
+    dialectOptions: {
+      options: { requestTimeout: 300000 }
+    },
+    pool: {
+      max: 500,
+      min: 0,
+      idle: 20000,
+      acquire: 100000,
+      evict: 20000
+    },
+    logging:true
   },
   secrets: {
     JWT: process.env.JWT_SECRET || 'asdf1234',
