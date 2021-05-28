@@ -148,7 +148,7 @@ module.exports = (Model, App) => {
 
   const UpdateCredit = (userUuid) => {
     Logger.info('10 added to user with UUID %s', userUuid);
-    return Model.users.update({ credit: Sequelize.literal('credit + 10') },
+    return Model.users.update({ credit: Sequelize.literal('credit + 0') },
       { where: { uuid: { [Op.eq]: userUuid } } });
   };
 
