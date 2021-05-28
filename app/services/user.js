@@ -147,9 +147,7 @@ module.exports = (Model, App) => {
   const GetUserCredit = (userUuid) => Model.users.findOne({ where: { uuid: { [Op.eq]: userUuid } } }).then((response) => response.dataValues);
 
   const UpdateCredit = (userUuid) => {
-    // Logger.info("€5 added to ", referral);
     Logger.info('10 added to user with UUID %s', userUuid);
-
     return Model.users.update({ credit: Sequelize.literal('credit + 10') },
       { where: { uuid: { [Op.eq]: userUuid } } });
   };
