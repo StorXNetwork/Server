@@ -278,7 +278,7 @@ module.exports = (Router, Service, App) => {
         return res.status(200).send({ token, user, uuid: userData.uuid });
       }
       // This account already exists
-      return res.status(400).send({ message: 'This account already exists' });
+      return res.status(200).send({ message: 'Please check mail' });
     }
     return res.status(400).send({ message: 'You must provide registration data' });
   });
