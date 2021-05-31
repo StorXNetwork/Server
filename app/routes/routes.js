@@ -222,7 +222,7 @@ module.exports = (Router, Service, App) => {
       let newUser = req.body;
 
       const { referral } = req.body;
-      asReferral = false;
+      let hasReferral = false;
       let referrer = null;
 
       // Call user service to find or create user
@@ -232,17 +232,16 @@ module.exports = (Router, Service, App) => {
         return res.status(500).send({ error: '' });
       }
 
-      if (userData.isNewRecord) {
-        if (uuid.validate(referral)) {
-          await Service.User.FindUserByUuid(referral).then((referalUser) => {
-            if (referalUser) {
-              newUser.credit = referral == undefined ? 0 : 10;
-              hasReferral = true;
-              referrer = referalUser;
-              Service.User.UpdateCredit(referral);
-            }
-          }).catch(() => { });
-        }
+      if (referral != 'undefined') {
+        await Service.User.FindUserByUuid(referral).then((referalUser) => {
+          if (referalUser) {
+            newUser.credit = 10;
+            hasReferral = true;
+            referrer = referalUser;
+            Service.User.UpdateCredit(referral);
+            Service.User.UpdateCredit(userData.dataValues.uuid);
+          }
+        }).catch(() => { });
 
         if (hasReferral) {
           Service.Analytics.identify({
