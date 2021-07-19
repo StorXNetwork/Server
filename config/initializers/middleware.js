@@ -7,8 +7,10 @@ const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const slowDown = require('express-slow-down');
+const requestIp = require('request-ip');
 
 module.exports = (App, Config) => {
+  App.express.use(requestIp.mw());
   // use helmet
   App.express.use(helmet());
 
