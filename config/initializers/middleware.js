@@ -55,6 +55,16 @@ module.exports = (App, Config) => {
     keyGenerator: limiterKeyGenerator
   }))
 
+  App.express.use('/api/limit', rateLimit({
+    windowMs: 2 * 60 * 1000, max: 25,
+    keyGenerator: limiterKeyGenerator
+  }))
+
+  App.express.use('/api/usage', rateLimit({
+    windowMs: 2 * 60 * 1000, max: 25,
+    keyGenerator: limiterKeyGenerator
+  }))
+
   App.express.use('/api/user/resend', rateLimit({
     windowMs: 10 * 1000,
     max: 1,
