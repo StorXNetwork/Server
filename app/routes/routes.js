@@ -214,7 +214,7 @@ module.exports = (Router, Service, App) => {
     });
   });
 
-  Router.post('/register', async (req, res) => {
+  Router.post('/register_1', async (req, res) => {
     // Data validation for process only request with all data
     if (req.body.email && req.body.password) {
       req.body.email = req.body.email.toLowerCase().trim();
