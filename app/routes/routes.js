@@ -48,7 +48,6 @@ module.exports = (Router, Service, App) => {
   PhotosRoutes(Router, Service, App);
 
   Router.post('/login', (req, res) => {
-    console.log(req.headers['x-forwarded-for'], 'cf-connecting-ip',req.headers['cf-connecting-ip'] );
     if (!req.body.email) {
       return res.status(400).send({ error: 'No email address specified' });
     }
@@ -218,7 +217,7 @@ module.exports = (Router, Service, App) => {
     // Data validation for process only request with all data
     if (req.body.email && req.body.password) {
       req.body.email = req.body.email.toLowerCase().trim();
-      Logger.warn('Register request for %s from %s', req.body.email, req.headers['X-Forwarded-For']);
+      Logger.warn('Register request for %s from %s', req.body.email, req.headers['x-forwarded-for'].split(",")[0] );
 
       let newUser = req.body;
 

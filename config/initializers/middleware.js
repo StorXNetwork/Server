@@ -22,7 +22,6 @@ module.exports = (App, Config) => {
       return req.user.email;
     }
     let ipArr = req.headers['x-forwarded-for'].split(",");
-    console.log(req.headers['x-forwarded-for'], ipArr, req.ip, "TETDTSTETSTSTST", ipArr[0])
     return ipArr[0] || req.ip;
   };
 
