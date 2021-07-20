@@ -48,7 +48,7 @@ module.exports = (Router, Service, App) => {
   PhotosRoutes(Router, Service, App);
 
   Router.post('/login', (req, res) => {
-    console.log(req.headers['x-forwarded-for']);
+    console.log(req.headers['x-forwarded-for'], 'cf-connecting-ip',req.headers['cf-connecting-ip'] );
     if (!req.body.email) {
       return res.status(400).send({ error: 'No email address specified' });
     }
