@@ -21,7 +21,9 @@ module.exports = (App, Config) => {
     if (req.user && req.user.email) {
       return req.user.email;
     }
-    return req.headers['X-Forwarded-For'] || req.ip;
+    let ipArr = req.headers['X-Forwarded-For'].split(",");
+    console.log(req.headers['X-Forwarded-For'], ipArr, ipArr[0], req.ip, "TETDTSTETSTSTST")
+    return ipArr[0] || req.ip;
   };
 
   const limitSkipper = (req) => {
