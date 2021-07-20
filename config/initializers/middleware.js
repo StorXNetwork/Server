@@ -48,7 +48,7 @@ module.exports = (App, Config) => {
   }));
 
   App.express.use('/api/register', rateLimit({
-    windowMs: 2 * 60 * 1000, max: 25,
+    windowMs: 1 * 60 * 1000, max: 5,
     keyGenerator: limiterKeyGenerator
   }))
 
