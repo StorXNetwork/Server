@@ -224,13 +224,12 @@ module.exports = (Router, Service, App) => {
       const { referral } = req.body;
       let hasReferral = false;
       let referrer = null;
-      await Service.User.FindUserByEmail(req.body.email).then(user => {
-        if(user){
-          return res.status(400).send({ message: 'User already exists' });
-        }
-      }).catch((err) => {
 
-      });
+      let existingUser = await Service.User.FindUserByEmail(req.body.email)
+
+      if(existingUser){
+        return res.status(400).send({ message: 'User already exists' });
+      }
 
       // Call user service to find or create user
       const userData = await Service.User.FindOrCreate(newUser);
