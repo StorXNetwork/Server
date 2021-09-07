@@ -152,6 +152,11 @@ module.exports = (Model, App) => {
       { where: { uuid: { [Op.eq]: userUuid } } });
   };
 
+  const UpdateKeyPair = (xdcaddress, encPrivKey, email) => {
+    Logger.info('New Address created for user %s', xdcaddress);
+    return Model.users.update({ xdcaddress, encPrivKey},{ where: { email: { [Op.eq]: email } } })
+  }
+
   const DecrementCredit = (userUuid) => {
     Logger.info('10 decremented to user with UUID %s', userUuid);
 
@@ -346,6 +351,7 @@ module.exports = (Model, App) => {
     InitializeUser,
     GetUserCredit,
     UpdateCredit,
+    UpdateKeyPair,
     DecrementCredit,
     DeactivateUser,
     ConfirmDeactivateUser,

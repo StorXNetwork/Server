@@ -86,6 +86,14 @@ module.exports = (sequelize, DataTypes) => {
       registerCompleted: {
         type: DataTypes.BOOLEAN,
         defaultValue: true
+      },
+      xdcaddress: {
+        type: DataTypes.STRING,
+        allowNull: true
+      },
+      encPrivKey: {
+        type: DataTypes.STRING,
+        allowNull: true
       }
     },
     {

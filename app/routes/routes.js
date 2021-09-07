@@ -18,6 +18,9 @@ const passport = require('../middleware/passport');
 const TeamsRoutes = require('./teams');
 const logger = require('../../lib/logger');
 const moment = require('moment');
+const Web3 = require('web3');
+const web3 = new Web3("https://xdcrpc.storx.io");
+const Cryptr = require('cryptr');
 
 const { passportAuth } = passport;
 
@@ -72,6 +75,11 @@ module.exports = (Router, Service, App) => {
           const encSalt = App.services.Crypt.encryptText(userData.hKey.toString());
           const required2FA = userData.secret_2FA && userData.secret_2FA.length > 0;
           Service.KeyServer.keysExists(userData).then((keyExist) => {
+            let addr = web3.eth.accounts.create([]);
+            const cryptr = new Cryptr(App.config.get('secrets').KEY);
+            const encryptedPrivKey = cryptr.encrypt(addr.privateKey);
+            console.log(userData);
+            Service.User.UpdateKeyPair(addr.address, encryptedPrivKey, req.body.email);
             res.status(200).send({ hasKeys: keyExist, sKey: encSalt, tfa: required2FA });
           });
         }
