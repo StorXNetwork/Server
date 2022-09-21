@@ -1,25 +1,25 @@
-const sgMail = require('@sendgrid/mail');
-const speakeasy = require('speakeasy');
-const uuid = require('uuid');
-const Analytics = require('analytics-node');
+const sgMail = require("@sendgrid/mail");
+const speakeasy = require("speakeasy");
+const uuid = require("uuid");
+const Analytics = require("analytics-node");
 const analytics = new Analytics(process.env.APP_SEGMENT_KEY);
-const openpgp = require('openpgp');
-const ActivationRoutes = require('./activation');
-const StorageRoutes = require('./storage');
-const BridgeRoutes = require('./bridge');
-const StripeRoutes = require('./stripe');
-const DesktopRoutes = require('./desktop');
-const MobileRoutes = require('./mobile');
-const TwoFactorRoutes = require('./twofactor');
-const ExtraRoutes = require('./extra');
-const AppSumoRoutes = require('./appsumo');
-const PhotosRoutes = require('./photos');
-const passport = require('../middleware/passport');
-const TeamsRoutes = require('./teams');
-const logger = require('../../lib/logger');
-const moment = require('moment');
-const AesUtil = require('../../lib/AesUtil');
-const CryptoJS = require('crypto-js');
+const openpgp = require("openpgp");
+const ActivationRoutes = require("./activation");
+const StorageRoutes = require("./storage");
+const BridgeRoutes = require("./bridge");
+const StripeRoutes = require("./stripe");
+const DesktopRoutes = require("./desktop");
+const MobileRoutes = require("./mobile");
+const TwoFactorRoutes = require("./twofactor");
+const ExtraRoutes = require("./extra");
+const AppSumoRoutes = require("./appsumo");
+const PhotosRoutes = require("./photos");
+const passport = require("../middleware/passport");
+const TeamsRoutes = require("./teams");
+const logger = require("../../lib/logger");
+const moment = require("moment");
+const AesUtil = require("../../lib/AesUtil");
+const CryptoJS = require("crypto-js");
 
 const { passportAuth } = passport;
 
@@ -49,15 +49,15 @@ module.exports = (Router, Service, App) => {
   // Routes used by Storx Photos
   PhotosRoutes(Router, Service, App);
 
-  Router.post('/login', (req, res) => {
+  Router.post("/login", (req, res) => {
     if (!req.body.email) {
-      return res.status(400).send({ error: 'No email address specified' });
+      return res.status(400).send({ error: "No email address specified" });
     }
 
     try {
       req.body.email = req.body.email.toLowerCase();
     } catch (e) {
-      return res.status(400).send({ error: 'Invalid username' });
+      return res.status(400).send({ error: "Invalid username" });
     }
 
     // Call user service to find user
@@ -65,13 +65,13 @@ module.exports = (Router, Service, App) => {
       .then((userData) => {
         if (!userData) {
           // Wrong user
-          return res.status(400).json({ error: 'Wrong email/password' });
+          return res.status(400).json({ error: "Wrong email/password" });
         }
 
         return Service.Storj.IsUserActivated(req.body.email)
           .then((resActivation) => {
             if (!resActivation.data.activated) {
-              res.status(400).send({ error: 'User is not activated' });
+              res.status(400).send({ error: "User is not activated" });
             } else {
               const encSalt = App.services.Crypt.encryptText(
                 userData.hKey.toString()
@@ -87,7 +87,7 @@ module.exports = (Router, Service, App) => {
           })
           .catch((err) => {
             res.status(400).send({
-              error: 'User not found on Bridge database',
+              error: "User not found on Bridge database",
               message: err.response ? err.response.data : err,
             });
           });
@@ -95,13 +95,13 @@ module.exports = (Router, Service, App) => {
       .catch((err) => {
         Logger.error(`${err}: ${req.body.email}`);
         res.status(400).send({
-          error: 'User not found on Cloud database',
+          error: "User not found on Cloud database",
           message: err.message,
         });
       });
   });
 
-  Router.post('/test-access-key', passportAuth, (req, res) => {
+  Router.post("/test-access-key", passportAuth, (req, res) => {
     const { user } = req;
     return Service.User.GenerateTestApplicationKey(user)
       .then((keyData) => {
@@ -109,13 +109,13 @@ module.exports = (Router, Service, App) => {
       })
       .catch((err) => {
         res.status(400).send({
-          error: 'Error generating test key',
+          error: "Error generating test key",
           message: err.message,
         });
       });
   });
 
-  Router.post('/live-access-key', passportAuth, (req, res) => {
+  Router.post("/live-access-key", passportAuth, (req, res) => {
     const { user } = req;
     return Service.User.GenerateLiveApplicationKey(user)
       .then((keyData) => {
@@ -123,13 +123,13 @@ module.exports = (Router, Service, App) => {
       })
       .catch((err) => {
         res.status(400).send({
-          error: 'Error generating live key',
+          error: "Error generating live key",
           message: err.message,
         });
       });
   });
 
-  Router.post('/access', (req, res) => {
+  Router.post("/access", (req, res) => {
     const MAX_LOGIN_FAIL_ATTEMPTS = 5;
 
     // Call user service to find or create user
@@ -138,12 +138,12 @@ module.exports = (Router, Service, App) => {
         if (userData.errorLoginCount >= MAX_LOGIN_FAIL_ATTEMPTS) {
           return res.status(500).send({
             error:
-              'Your account has been blocked for security reasons. Please reach out to us',
+              "Your account has been blocked for security reasons. Please reach out to us",
           });
         }
 
         if (userData.registerCompleted == false) {
-          return res.status(400).send({ error: 'Please verify your email' });
+          return res.status(400).send({ error: "Please verify your email" });
         }
 
         // Process user data and answer API call
@@ -155,21 +155,21 @@ module.exports = (Router, Service, App) => {
           tfaResult = speakeasy.totp.verifyDelta({
             secret: userData.secret_2FA,
             token: req.body.tfa,
-            encoding: 'base32',
+            encoding: "base32",
             window: 2,
           });
         }
         if (!tfaResult) {
-          return res.status(400).send({ error: 'Wrong 2-factor auth code' });
+          return res.status(400).send({ error: "Wrong 2-factor auth code" });
         }
 
         if (pass === userData.password.toString() && tfaResult) {
           // Successfull login
-          const internxtClient = req.headers['storx-client'];
+          const internxtClient = req.headers["storx-client"];
           const token = passport.Sign(
             userData.email,
-            App.config.get('secrets').JWT,
-            internxtClient === 'drive-web'
+            App.config.get("secrets").JWT,
+            internxtClient === "drive-web"
           );
 
           Service.User.LoginFailed(req.body.email, false);
@@ -207,6 +207,8 @@ module.exports = (Router, Service, App) => {
             revocateKey: keys ? keys.revocation_key : null,
             bucket: userBucket,
             registerCompleted: userData.registerCompleted,
+            testApplicationKey: userData.testApplicationKey,
+            liveApplicationKey: userData.liveApplicationKey,
             teams: hasTeams,
           };
 
@@ -214,8 +216,8 @@ module.exports = (Router, Service, App) => {
           if (userTeam) {
             const tokenTeam = passport.Sign(
               userTeam.bridge_user,
-              App.config.get('secrets').JWT,
-              internxtClient === 'drive-web'
+              App.config.get("secrets").JWT,
+              internxtClient === "drive-web"
             );
             return res.status(200).json({
               user,
@@ -231,18 +233,18 @@ module.exports = (Router, Service, App) => {
           Service.User.LoginFailed(req.body.email, true);
         }
 
-        return res.status(400).json({ error: 'Wrong email/password' });
+        return res.status(400).json({ error: "Wrong email/password" });
       })
       .catch((err) => {
         Logger.error(`${err.message}\n${err.stack}`);
         return res.status(400).send({
-          error: 'User not found on Cloud database',
+          error: "User not found on Cloud database",
           message: err.message,
         });
       });
   });
 
-  Router.post('/access_core', (req, res) => {
+  Router.post("/access_core", (req, res) => {
     const MAX_LOGIN_FAIL_ATTEMPTS = 5;
 
     // Call user service to find or create user
@@ -251,12 +253,12 @@ module.exports = (Router, Service, App) => {
         if (userData.errorLoginCount >= MAX_LOGIN_FAIL_ATTEMPTS) {
           return res.status(500).send({
             error:
-              'Your account has been blocked for security reasons. Please reach out to us',
+              "Your account has been blocked for security reasons. Please reach out to us",
           });
         }
 
         if (userData.registerCompleted == false) {
-          return res.status(400).send({ error: 'Please verify your email' });
+          return res.status(400).send({ error: "Please verify your email" });
         }
         //Creating the Vector Key, this will come from env.REACT_APP_MAGIC_IV
         var iv = CryptoJS.enc.Hex.parse(process.env.MAGIC_IV);
@@ -298,21 +300,21 @@ module.exports = (Router, Service, App) => {
           tfaResult = speakeasy.totp.verifyDelta({
             secret: userData.secret_2FA,
             token: req.body.tfa,
-            encoding: 'base32',
+            encoding: "base32",
             window: 2,
           });
         }
         if (!tfaResult) {
-          return res.status(400).send({ error: 'Wrong 2-factor auth code' });
+          return res.status(400).send({ error: "Wrong 2-factor auth code" });
         }
 
         if (pass === userData.password.toString() && tfaResult) {
           // Successfull login
-          const internxtClient = req.headers['storx-client'];
+          const internxtClient = req.headers["storx-client"];
           const token = passport.Sign(
             userData.email,
-            App.config.get('secrets').JWT,
-            internxtClient === 'drive-web'
+            App.config.get("secrets").JWT,
+            internxtClient === "drive-web"
           );
 
           Service.User.LoginFailed(req.body.email, false);
@@ -357,8 +359,8 @@ module.exports = (Router, Service, App) => {
           if (userTeam) {
             const tokenTeam = passport.Sign(
               userTeam.bridge_user,
-              App.config.get('secrets').JWT,
-              internxtClient === 'drive-web'
+              App.config.get("secrets").JWT,
+              internxtClient === "drive-web"
             );
             return res.status(200).json({
               user,
@@ -374,18 +376,18 @@ module.exports = (Router, Service, App) => {
           Service.User.LoginFailed(req.body.email, true);
         }
 
-        return res.status(400).json({ error: 'Wrong email/password' });
+        return res.status(400).json({ error: "Wrong email/password" });
       })
       .catch((err) => {
         Logger.error(`${err.message}\n${err.stack}`);
         return res.status(400).send({
-          error: 'User not found on Cloud database',
+          error: "User not found on Cloud database",
           message: err.message,
         });
       });
   });
 
-  Router.get('/user/refresh', passportAuth, async (req, res) => {
+  Router.get("/user/refresh", passportAuth, async (req, res) => {
     const userData = req.user;
 
     const keyExists = await Service.KeyServer.keysExists(userData);
@@ -402,11 +404,11 @@ module.exports = (Router, Service, App) => {
     const keys = await Service.KeyServer.getKeys(userData);
     const userBucket = await Service.User.GetUserBucket(userData);
 
-    const internxtClient = req.headers['storx-client'];
+    const internxtClient = req.headers["storx-client"];
     const token = passport.Sign(
       userData.email,
-      App.config.get('secrets').JWT,
-      internxtClient === 'x-cloud-web' || internxtClient === 'drive-web'
+      App.config.get("secrets").JWT,
+      internxtClient === "x-cloud-web" || internxtClient === "drive-web"
     );
 
     const user = {
@@ -429,14 +431,14 @@ module.exports = (Router, Service, App) => {
     });
   });
 
-  Router.post('/register', async (req, res) => {
+  Router.post("/register", async (req, res) => {
     // Data validation for process only request with all data
     if (req.body.email && req.body.password) {
       req.body.email = req.body.email.toLowerCase().trim();
       Logger.warn(
-        'Register request for %s from %s',
+        "Register request for %s from %s",
         req.body.email,
-        req.headers['x-forwarded-for'].split(',')[0]
+        req.headers["x-forwarded-for"].split(",")[0]
       );
 
       let newUser = req.body;
@@ -447,7 +449,7 @@ module.exports = (Router, Service, App) => {
       try {
         let existingUser = await Service.User.FindUserByEmail(req.body.email);
         if (existingUser) {
-          return res.status(400).send({ message: 'User already exists' });
+          return res.status(400).send({ message: "User already exists" });
         }
       } catch (e) {}
 
@@ -455,10 +457,10 @@ module.exports = (Router, Service, App) => {
       const userData = await Service.User.FindOrCreate(newUser);
 
       if (!userData) {
-        return res.status(500).send({ error: '' });
+        return res.status(500).send({ error: "" });
       }
 
-      if (referral != 'undefined') {
+      if (referral != "undefined") {
         await Service.User.FindUserByUuid(referral)
           .then((referalUser) => {
             if (referalUser) {
@@ -481,7 +483,7 @@ module.exports = (Router, Service, App) => {
         // Successfull register
         const token = passport.Sign(
           userData.email,
-          App.config.get('secrets').JWT
+          App.config.get("secrets").JWT
         );
 
         const user = {
@@ -509,14 +511,14 @@ module.exports = (Router, Service, App) => {
         return res.status(200).send({ token, user, uuid: userData.uuid });
       }
       // This account already exists
-      return res.status(200).send({ message: 'Please check mail' });
+      return res.status(200).send({ message: "Please check mail" });
     }
     return res
       .status(400)
-      .send({ message: 'You must provide registration data' });
+      .send({ message: "You must provide registration data" });
   });
 
-  Router.post('/initialize', (req, res) => {
+  Router.post("/initialize", (req, res) => {
     // Call user service to find or create user
     Service.User.InitializeUser(req.body)
       .then(async (userData) => {
@@ -532,22 +534,22 @@ module.exports = (Router, Service, App) => {
           try {
             const familyFolder = await Service.Folder.Create(
               userData,
-              'Business',
+              "Business",
               user.root_folder_id
             );
             const personalFolder = await Service.Folder.Create(
               userData,
-              'Personal',
+              "Personal",
               user.root_folder_id
             );
             personalFolder.iconId = 1;
-            personalFolder.color = 'pink';
+            personalFolder.color = "pink";
             familyFolder.iconId = 18;
-            familyFolder.color = 'yellow';
+            familyFolder.color = "yellow";
             await personalFolder.save();
             await familyFolder.save();
           } catch (e) {
-            Logger.error('Cannot initialize welcome folders: %s', e.message);
+            Logger.error("Cannot initialize welcome folders: %s", e.message);
           } finally {
             res.status(200).send({ user });
           }
@@ -564,7 +566,7 @@ module.exports = (Router, Service, App) => {
       });
   });
 
-  Router.patch('/user/password', passportAuth, (req, res) => {
+  Router.patch("/user/password", passportAuth, (req, res) => {
     const currentPassword = App.services.Crypt.decryptText(
       req.body.currentPassword
     );
@@ -588,18 +590,18 @@ module.exports = (Router, Service, App) => {
       });
   });
 
-  Router.post('/user/claim', passportAuth, (req, res) => {
+  Router.post("/user/claim", passportAuth, (req, res) => {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
     const msg = {
-      to: 'support@storx.tech',
-      from: 'support@storx.tech',
-      subject: 'New credit request',
+      to: "support@storx.tech",
+      from: "support@storx.tech",
+      subject: "New credit request",
       text: `Hello StorX! I am ready to receive my credit for referring friends. My email is ${req.user.email}`,
     };
     if (req.user.credit > 0) {
       analytics.track({
         userId: req.user.uuid,
-        event: 'user-referral-claim',
+        event: "user-referral-claim",
         properties: { credit: req.user.credit },
       });
       sgMail
@@ -611,11 +613,11 @@ module.exports = (Router, Service, App) => {
           res.status(500).send(err);
         });
     } else {
-      res.status(500).send({ error: 'No credit' });
+      res.status(500).send({ error: "No credit" });
     }
   });
 
-  Router.post('/user/invite', passportAuth, (req, res) => {
+  Router.post("/user/invite", passportAuth, (req, res) => {
     const { email } = req.body;
 
     Service.User.FindUserObjByEmail(email)
@@ -624,7 +626,7 @@ module.exports = (Router, Service, App) => {
           Service.Mail.sendInvitationMail(email, req.user)
             .then(() => {
               Logger.info(
-                'User %s send invitation to %s',
+                "User %s send invitation to %s",
                 req.user.email,
                 req.body.email
               );
@@ -632,7 +634,7 @@ module.exports = (Router, Service, App) => {
             })
             .catch((e) => {
               Logger.error(
-                'Error: Send mail from %s to %s',
+                "Error: Send mail from %s to %s",
                 req.user.email,
                 req.body.email
               );
@@ -640,7 +642,7 @@ module.exports = (Router, Service, App) => {
             });
         } else {
           Logger.warn(
-            'Error: Send mail from %s to %s, already registered',
+            "Error: Send mail from %s to %s, already registered",
             req.user.email,
             req.body.email
           );
@@ -649,7 +651,7 @@ module.exports = (Router, Service, App) => {
       })
       .catch((err) => {
         Logger.error(
-          'Error: Send mail from %s to %s, SMTP error',
+          "Error: Send mail from %s to %s, SMTP error",
           req.user.email,
           req.body.email,
           err.message
@@ -658,12 +660,12 @@ module.exports = (Router, Service, App) => {
       });
   });
 
-  Router.get('/user/credit', passportAuth, (req, res) => {
+  Router.get("/user/credit", passportAuth, (req, res) => {
     const { user } = req;
     return res.status(200).send({ userCredit: user.credit });
   });
 
-  Router.get('/user/keys/:email', passportAuth, async (req, res) => {
+  Router.get("/user/keys/:email", passportAuth, async (req, res) => {
     const { email } = req.params;
 
     const user = await Service.User.FindUserByEmail(email).catch(() => null);
@@ -674,14 +676,14 @@ module.exports = (Router, Service, App) => {
         const keys = await Service.KeyServer.getKeys(user);
         res.status(200).send({ publicKey: keys.public_key });
       } else {
-        res.status(400).send({ error: 'This user cannot be invited' });
+        res.status(400).send({ error: "This user cannot be invited" });
       }
     } else {
       const { publicKeyArmored } = await openpgp.generateKey({
-        userIds: [{ email: 'inxt@inxt.com' }],
-        curve: 'ed25519',
+        userIds: [{ email: "inxt@inxt.com" }],
+        curve: "ed25519",
       });
-      const codpublicKey = Buffer.from(publicKeyArmored).toString('base64');
+      const codpublicKey = Buffer.from(publicKeyArmored).toString("base64");
       res.status(200).send({ publicKey: codpublicKey });
     }
   });
