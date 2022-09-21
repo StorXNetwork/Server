@@ -1,7 +1,37 @@
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
 
-const passportAuth = passport.authenticate('jwt', { session: false });
+function passportAuth(req, res, next) {
+  console.log(res.locals.skipPassport, 'res.locals.skipPassport');
+  // TODO: If res.locals.skipPassport is true, call next() directly.
+
+  const authCheck = passport.authenticate(
+    'jwt',
+    { session: false },
+    (err, user, info) => {
+      if (err) {
+        return res.status(401).send({ error: 'Invalid user.' });
+      } else {
+        req.user = user.dataValues;
+        next();
+      }
+    }
+  );
+  authCheck(req);
+}
+
+function apiAccessKeyCheckAuth(req, res, next) {
+  if (req.headers['x-api-access-key']) {
+    // TODO : condition to check whether user with this API KEY exits;
+    if (req.headers['x-api-access-key'] === '123456789') {
+      res.locals.skipPassport = true;
+      // TODO: Get user and assign it to req.user
+      next();
+    } else {
+      next();
+    }
+  }
+}
 
 function Sign(data, secret, useNewToken = false) {
   const token = useNewToken
@@ -18,6 +48,7 @@ function Verify(token, secret) {
 
 module.exports = {
   passportAuth,
+  apiAccessKeyCheckAuth,
   Sign,
-  Verify
+  Verify,
 };
