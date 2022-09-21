@@ -9,10 +9,21 @@ module.exports = {
       queryInterface.renameColumn('users', 'storeMnemonic', 'store_mnemonic'),
       queryInterface.renameColumn('users', 'hKey', 'h_key'),
       queryInterface.renameColumn('users', 'secret_2FA', 'secret_2_f_a'),
-      queryInterface.renameColumn('users',
+      queryInterface.renameColumn(
+        'users',
         'errorLoginCount',
         'error_login_count'
-      )
+      ),
+      queryInterface.renameColumn(
+        'users',
+        'testApplicationKey',
+        'test_application_key'
+      ),
+      queryInterface.renameColumn(
+        'users',
+        'liveApplicationKey',
+        'live_application_key'
+      ),
     ]);
   },
 
@@ -26,10 +37,21 @@ module.exports = {
       queryInterface.renameColumn('users', 'store_mnemonic', 'storeMnemonic'),
       queryInterface.renameColumn('users', 'h_key', 'hKey'),
       queryInterface.renameColumn('users', 'secret_2_f_a', 'secret_2FA'),
-      queryInterface.renameColumn('users',
+      queryInterface.renameColumn(
+        'users',
         'error_login_count',
         'errorLoginCount'
-      )
+      ),
+      queryInterface.renameColumn(
+        'users',
+        'test_application_key',
+        'testApplicationKey'
+      ),
+      queryInterface.renameColumn(
+        'users',
+        'live_application_key',
+        'liveApplicationKey'
+      ),
     ]);
-  }
+  },
 };
