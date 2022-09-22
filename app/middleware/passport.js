@@ -1,5 +1,8 @@
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
+const Models = require('../models/models');
+const sequelize = require('sequelize');
+const { Op } = sequelize;
 
 function passportAuth(req, res, next) {
   console.log(res.locals.skipPassport, 'res.locals.skipPassport');
@@ -22,14 +25,32 @@ function passportAuth(req, res, next) {
 
 function apiAccessKeyCheckAuth(req, res, next) {
   if (req.headers['x-api-access-key']) {
-    // TODO : condition to check whether user with this API KEY exits;
-    if (req.headers['x-api-access-key'] === '123456789') {
-      res.locals.skipPassport = true;
-      // TODO: Get user and assign it to req.user
-      next();
-    } else {
-      next();
-    }
+    const headerAccessKey = req.headers['x-api-access-key'];
+    // Condition to check whether user with this API KEY exits;
+    Models.users
+      .findOne({
+        where: {
+          liveApplicationKey: { [Op.eq]: headerAccessKey },
+        },
+      })
+      .then((userData) => {
+        if (userData) {
+          let user = userData.dataValues;
+          if (user.mnemonic) user.mnemonic = user.mnemonic.toString();
+          // Get user and assign it to req.user
+          res.locals.skipPassport = true;
+          req.user = user;
+          next();
+        } else {
+          next();
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+        next();
+      });
+  } else {
+    next();
   }
 }
 
