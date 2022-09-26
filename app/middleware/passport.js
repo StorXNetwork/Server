@@ -1,12 +1,12 @@
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
-const Models = require('../models/models');
-const sequelize = require('sequelize');
-const { Op } = sequelize;
 
 function passportAuth(req, res, next) {
-  console.log(res.locals.skipPassport, 'res.locals.skipPassport');
   // TODO: If res.locals.skipPassport is true, call next() directly.
+
+  if (res.locals.skipPassport) {
+    next();
+  }
 
   const authCheck = passport.authenticate(
     'jwt',
@@ -23,35 +23,33 @@ function passportAuth(req, res, next) {
   authCheck(req);
 }
 
-function apiAccessKeyCheckAuth(req, res, next) {
-  if (req.headers['x-api-access-key']) {
-    const headerAccessKey = req.headers['x-api-access-key'];
-    // Condition to check whether user with this API KEY exits;
-    Models.users
-      .findOne({
-        where: {
-          liveApplicationKey: { [Op.eq]: headerAccessKey },
-        },
-      })
-      .then((userData) => {
-        if (userData) {
-          let user = userData.dataValues;
-          if (user.mnemonic) user.mnemonic = user.mnemonic.toString();
-          // Get user and assign it to req.user
-          res.locals.skipPassport = true;
-          req.user = user;
+function apiAccessKeyCheckAuth(services) {
+  return (req, res, next) => {
+    if (req.headers['x-api-access-key']) {
+      const headerAccessKey = req.headers['x-api-access-key'];
+
+      // Condition to check whether user with this API KEY exits;
+      services.User.FindUserByLiveApplicationKey(headerAccessKey)
+        .then((userData) => {
+          if (userData) {
+            let user = userData;
+            if (user.mnemonic) user.mnemonic = user.mnemonic.toString();
+            // Get user and assign it to req.user
+            res.locals.skipPassport = true;
+            req.user = user;
+            next();
+          } else {
+            next();
+          }
+        })
+        .catch((err) => {
+          Logger.error('Access key user retrieve error : ', err.message);
           next();
-        } else {
-          next();
-        }
-      })
-      .catch((err) => {
-        console.log(err);
-        next();
-      });
-  } else {
-    next();
-  }
+        });
+    } else {
+      next();
+    }
+  };
 }
 
 function Sign(data, secret, useNewToken = false) {

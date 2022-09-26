@@ -6,10 +6,15 @@ const logger = require('../../lib/logger');
 
 const Logger = logger.getInstance();
 
-module.exports = (Router) => {
-  Router.get('/welcome', apiAccessKeyCheckAuth, passportAuth, (req, res) => {
-    res.status(200).send({ file_exists: !!req.user.welcomePack });
-  });
+module.exports = (Router, Service) => {
+  Router.get(
+    '/welcome',
+    apiAccessKeyCheckAuth(Service),
+    passportAuth,
+    (req, res) => {
+      res.status(200).send({ file_exists: !!req.user.welcomePack });
+    }
+  );
 
   Router.delete('/welcome', passportAuth, (req, res) => {
     req.user.welcomePack = false;

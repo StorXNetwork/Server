@@ -1,11 +1,11 @@
-const axios = require("axios");
-const sequelize = require("sequelize");
-const async = require("async");
-const uuid = require("uuid");
-const { Sequelize } = require("sequelize");
-const crypto = require("crypto-js");
-const Analytics = require("./analytics");
-const { randomBytes } = require("crypto");
+const axios = require('axios');
+const sequelize = require('sequelize');
+const async = require('async');
+const uuid = require('uuid');
+const { Sequelize } = require('sequelize');
+const crypto = require('crypto-js');
+const Analytics = require('./analytics');
+const { randomBytes } = require('crypto');
 
 const { Op } = sequelize;
 
@@ -26,7 +26,7 @@ module.exports = (Model, App) => {
 
     // Throw error when user email. pass, salt or mnemonic is missing
     if (!user.email || !userPass || !userSalt || !user.mnemonic) {
-      throw Error("Wrong user registration data");
+      throw Error('Wrong user registration data');
     }
 
     return Model.users.sequelize.transaction(async (t) =>
@@ -83,11 +83,11 @@ module.exports = (Model, App) => {
             }
 
             if (!bridgeUser.data) {
-              throw Error("Error creating bridge user");
+              throw Error('Error creating bridge user');
             }
 
             Logger.info(
-              "User Service | created brigde user: %s",
+              'User Service | created brigde user: %s',
               userResult.email
             );
 
@@ -139,7 +139,7 @@ module.exports = (Model, App) => {
             userData.userId,
             user.mnemonic
           );
-          Logger.info("User init | root bucket created %s", rootBucket.name);
+          Logger.info('User init | root bucket created %s', rootBucket.name);
 
           const rootFolderName = await Crypt.encryptName(`${rootBucket.name}`);
           const rootFolder = await userData.createFolder({
@@ -147,7 +147,7 @@ module.exports = (Model, App) => {
             bucket: rootBucket.id,
           });
 
-          Logger.info("User init | root folder created, id: %s", rootFolder.id);
+          Logger.info('User init | root folder created, id: %s', rootFolder.id);
 
           // Update user register with root folder Id
           await userData.update(
@@ -174,7 +174,24 @@ module.exports = (Model, App) => {
 
             resolve(user);
           } else {
-            reject(Error("User not found on Drive database"));
+            reject(Error('User not found on Drive database'));
+          }
+        })
+        .catch((err) => reject(err));
+    });
+
+  const FindUserByLiveApplicationKey = (key) =>
+    new Promise((resolve, reject) => {
+      Model.users
+        .findOne({ where: { liveApplicationKey: { [Op.eq]: key } } })
+        .then((userData) => {
+          if (userData) {
+            const user = userData.dataValues;
+            if (user.mnemonic) user.mnemonic = user.mnemonic.toString();
+
+            resolve(user);
+          } else {
+            reject(Error('User not found on Drive database'));
           }
         })
         .catch((err) => reject(err));
@@ -192,18 +209,18 @@ module.exports = (Model, App) => {
       .then((response) => response.dataValues);
 
   const UpdateCredit = (userUuid) => {
-    Logger.info("10 added to user with UUID %s", userUuid);
+    Logger.info('10 added to user with UUID %s', userUuid);
     return Model.users.update(
-      { credit: Sequelize.literal("credit + 10") },
+      { credit: Sequelize.literal('credit + 10') },
       { where: { uuid: { [Op.eq]: userUuid } } }
     );
   };
 
   const DecrementCredit = (userUuid) => {
-    Logger.info("10 decremented to user with UUID %s", userUuid);
+    Logger.info('10 decremented to user with UUID %s', userUuid);
 
     return Model.users.update(
-      { credit: Sequelize.literal("credit - 10") },
+      { credit: Sequelize.literal('credit - 10') },
       { where: { uuid: { [Op.eq]: userUuid } } }
     );
   };
@@ -215,14 +232,14 @@ module.exports = (Model, App) => {
         .then((user) => {
           const password = crypto.SHA256(user.userId).toString();
           const auth = Buffer.from(`${user.email}:${password}`).toString(
-            "base64"
+            'base64'
           );
 
           axios
-            .delete(`${App.config.get("STORJ_BRIDGE")}/users/${email}`, {
+            .delete(`${App.config.get('STORJ_BRIDGE')}/users/${email}`, {
               headers: {
                 Authorization: `Basic ${auth}`,
-                "Content-Type": "application/json",
+                'Content-Type': 'application/json',
               },
             })
             .then((data) => {
@@ -242,17 +259,17 @@ module.exports = (Model, App) => {
       (next) => {
         axios
           .get(
-            `${App.config.get("STORJ_BRIDGE")}/deactivationStripe/${token}`,
+            `${App.config.get('STORJ_BRIDGE')}/deactivationStripe/${token}`,
             {
-              headers: { "Content-Type": "application/json" },
+              headers: { 'Content-Type': 'application/json' },
             }
           )
           .then((res) => {
-            Logger.warn("User deleted from bridge");
+            Logger.warn('User deleted from bridge');
             next(null, res);
           })
           .catch((err) => {
-            Logger.error("Error user deleted from bridge: %s", err.message);
+            Logger.error('Error user deleted from bridge: %s', err.message);
             next(err.response.data.error || err.message);
           });
       },
@@ -303,17 +320,17 @@ module.exports = (Model, App) => {
 
               await user.destroy();
             } catch (e) {
-              user.email += "-DELETED";
+              user.email += '-DELETED';
               user.save();
             }
 
             analytics.track({
               userId: user.uuid,
-              event: "user-deactivation-confirm",
+              event: 'user-deactivation-confirm',
               properties: { email: userEmail },
             });
 
-            Logger.info("User deleted on sql: %s", userEmail);
+            Logger.info('User deleted on sql: %s', userEmail);
 
             next();
           })
@@ -355,7 +372,7 @@ module.exports = (Model, App) => {
   ) => {
     const storedPassword = user.password.toString();
     if (storedPassword !== currentPassword) {
-      throw Error("Invalid password");
+      throw Error('Invalid password');
     }
 
     await Model.users.update(
@@ -376,7 +393,7 @@ module.exports = (Model, App) => {
     Model.users.update(
       {
         errorLoginCount: loginFailed
-          ? sequelize.literal("error_login_count + 1")
+          ? sequelize.literal('error_login_count + 1')
           : 0,
       },
       { where: { email: user } }
@@ -395,10 +412,10 @@ module.exports = (Model, App) => {
   };
 
   const GenerateTestApplicationKey = async (user) => {
-    Logger.info("Generating generateTestApplicationKey", user.email);
+    Logger.info('Generating generateTestApplicationKey', user.email);
     const token = randomBytes(32);
-    const hex = token.toString("hex");
-    let randomKey = "sx_test_" + hex;
+    const hex = token.toString('hex');
+    let randomKey = 'sx_test_' + hex;
 
     return new Promise(async (resolve, reject) => {
       await Model.users.update(
@@ -415,7 +432,7 @@ module.exports = (Model, App) => {
               user.testApplicationKey = user.testApplicationKey;
             resolve(user.testApplicationKey);
           } else {
-            reject(Error("User not found on Drive database"));
+            reject(Error('User not found on Drive database'));
           }
         })
         .catch((err) => reject(err));
@@ -423,10 +440,10 @@ module.exports = (Model, App) => {
   };
 
   const GenerateLiveApplicationKey = (user) => {
-    Logger.info("Generating generateLiveApplicationKey", user.email);
+    Logger.info('Generating generateLiveApplicationKey', user.email);
     const token = randomBytes(32);
-    const hex = token.toString("hex");
-    let randomKey = "sx_live_" + hex;
+    const hex = token.toString('hex');
+    let randomKey = 'sx_live_' + hex;
 
     return new Promise(async (resolve, reject) => {
       await Model.users.update(
@@ -443,7 +460,7 @@ module.exports = (Model, App) => {
               user.liveApplicationKey = user.liveApplicationKey;
             resolve(user.liveApplicationKey);
           } else {
-            reject(Error("User not found on Drive database"));
+            reject(Error('User not found on Drive database'));
           }
         })
         .catch((err) => reject(err));
@@ -467,7 +484,7 @@ module.exports = (Model, App) => {
         where: {
           id: { [Op.eq]: userObject.root_folder_id },
         },
-        attributes: ["bucket"],
+        attributes: ['bucket'],
       })
       .then((folder) => folder.bucket)
       .catch(() => null);
@@ -502,13 +519,14 @@ module.exports = (Model, App) => {
   };
 
   const ActivateUser = (token) =>
-    axios.get(`${App.config.get("STORJ_BRIDGE")}/activations/${token}`);
+    axios.get(`${App.config.get('STORJ_BRIDGE')}/activations/${token}`);
 
   return {
-    Name: "User",
+    Name: 'User',
     FindOrCreate,
     FindUserByEmail,
     FindUserObjByEmail,
+    FindUserByLiveApplicationKey,
     FindUserByUuid,
     InitializeUser,
     GetUserCredit,
