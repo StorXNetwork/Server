@@ -6,21 +6,21 @@ function passportAuth(req, res, next) {
 
   if (res.locals.skipPassport) {
     next();
-  }
-
-  const authCheck = passport.authenticate(
-    'jwt',
-    { session: false },
-    (err, user, info) => {
-      if (err) {
-        return res.status(401).send({ error: 'Invalid user.' });
-      } else {
-        req.user = user.dataValues;
-        next();
+  } else {
+    const authCheck = passport.authenticate(
+      'jwt',
+      { session: false },
+      (err, user, info) => {
+        if (err) {
+          return res.status(401).send({ error: 'Invalid user.' });
+        } else {
+          req.user = user.dataValues;
+          next();
+        }
       }
-    }
-  );
-  authCheck(req);
+    );
+    authCheck(req);
+  }
 }
 
 function apiAccessKeyCheckAuth(services) {
