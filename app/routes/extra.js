@@ -12,7 +12,10 @@ module.exports = (Router, Service) => {
     apiAccessKeyCheckAuth(Service),
     passportAuth,
     (req, res) => {
-      res.status(200).send({ file_exists: !!req.user.welcomePack });
+      res.status(200).send({
+        file_exists: !!req.user.welcomePack,
+        root_folder_id: req.user.root_folder_id,
+      });
     }
   );
 
