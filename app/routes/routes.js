@@ -2,8 +2,11 @@ const sgMail = require('@sendgrid/mail');
 const speakeasy = require('speakeasy');
 const uuid = require('uuid');
 const Analytics = require('analytics-node');
+
 const analytics = new Analytics(process.env.APP_SEGMENT_KEY);
 const openpgp = require('openpgp');
+const moment = require('moment');
+const CryptoJS = require('crypto-js');
 const ActivationRoutes = require('./activation');
 const StorageRoutes = require('./storage');
 const BridgeRoutes = require('./bridge');
@@ -17,9 +20,7 @@ const PhotosRoutes = require('./photos');
 const passport = require('../middleware/passport');
 const TeamsRoutes = require('./teams');
 const logger = require('../../lib/logger');
-const moment = require('moment');
 const AesUtil = require('../../lib/AesUtil');
-const CryptoJS = require('crypto-js');
 
 const { passportAuth } = passport;
 
@@ -89,6 +90,64 @@ module.exports = (Router, Service, App) => {
         error: 'User not found on Cloud database',
         message: err.message
       });
+    });
+  });
+
+  Router.post('/reset-password', async (req, res) => {
+    try {
+      const user = req.body;
+      if (user.password) {
+        const userDetails = await Service.User.getUserByToken(user.token);
+
+        if (!userDetails) {
+          return res.status(400).send({
+            error: 'Unauthorized',
+            message: 'Invalid Token',
+            status: false
+          });
+        }
+
+        const passwordUpdated = await Service.User.updateUserPassword({ ...user, id: userDetails.id });
+
+        if (passwordUpdated) {
+          await Service.User.deleteUserToken(userDetails.id);
+          return res.status(200).send({ message: 'Password Updated Successfully', status: true });
+        }
+      }
+      return res.status(400).send({ message: 'You must provide password', status: false });
+    } catch (e) {
+      return res.status(400).send({ message: 'Invalid Payload', status: false });
+    }
+  });
+
+  Router.post('/send-email', (req, res) => {
+    const passwordPayload = req.body;
+
+    return Service.User.FindUserByEmail(passwordPayload.email).then(async (userData) => {
+      if (!userData) {
+        // Wrong user
+        return res.status(400).json({ error: 'User Does not exist' });
+      }
+
+      try {
+        const token = await Service.User.CreateToken(userData.id);
+
+        const { data } = await Service.User.SendResetTokenToBridge({ token: token.token, email: userData.email });
+
+        if (data.emailSend) {
+          Logger.info('Email sent successfully');
+          return res.status(200).json({
+            status: true,
+            message: 'email sent successfully!'
+          });
+        }
+      } catch (err) {
+        Logger.error('Error creating token: %s', err.message);
+        return res.send(500).json({ error: 'Error creating token' });
+      }
+    }).catch((e) => {
+      console.log(e);
+      return res.status(400).json({ error: 'User Does not exist' });
     });
   });
 
@@ -191,22 +250,22 @@ module.exports = (Router, Service, App) => {
       if (userData.registerCompleted == false) {
         return res.status(400).send({ error: 'Please verify your email' });
       }
-      //Creating the Vector Key, this will come from env.REACT_APP_MAGIC_IV 
-      var iv = CryptoJS.enc.Hex.parse(process.env.MAGIC_IV);
-      //Encoding the Password in from UTF8 to byte array, this will we use env.APP_SEGMENT_KEY 
-      var Pass = CryptoJS.enc.Utf8.parse(process.env.APP_SEGMENT_KEY);
-      //Encoding the Salt in from UTF8 to byte array, this will come from env.MAGIC_SALT 
-      var Salt = CryptoJS.enc.Utf8.parse(process.env.MAGIC_SALT);
-      //Creating the key in PBKDF2 format to be used during the decryption
-      var key128Bits1000Iterations = CryptoJS.PBKDF2(Pass.toString(CryptoJS.enc.Utf8), Salt, { keySize: 128 / 32, iterations: 1000 });
-      //Enclosing the test to be decrypted in a CipherParams object as supported by the CryptoJS libarary, this will come from body.password
-      var cipherParams = CryptoJS.lib.CipherParams.create({
-          ciphertext: CryptoJS.enc.Hex.parse(req.body.password)
+      // Creating the Vector Key, this will come from env.REACT_APP_MAGIC_IV
+      const iv = CryptoJS.enc.Hex.parse(process.env.MAGIC_IV);
+      // Encoding the Password in from UTF8 to byte array, this will we use env.APP_SEGMENT_KEY
+      const Pass = CryptoJS.enc.Utf8.parse(process.env.APP_SEGMENT_KEY);
+      // Encoding the Salt in from UTF8 to byte array, this will come from env.MAGIC_SALT
+      const Salt = CryptoJS.enc.Utf8.parse(process.env.MAGIC_SALT);
+      // Creating the key in PBKDF2 format to be used during the decryption
+      const key128Bits1000Iterations = CryptoJS.PBKDF2(Pass.toString(CryptoJS.enc.Utf8), Salt, { keySize: 128 / 32, iterations: 1000 });
+      // Enclosing the test to be decrypted in a CipherParams object as supported by the CryptoJS libarary, this will come from body.password
+      const cipherParams = CryptoJS.lib.CipherParams.create({
+        ciphertext: CryptoJS.enc.Hex.parse(req.body.password)
       });
 
-      //Decrypting the string contained in cipherParams using the PBKDF2 key
-      var decrypted = CryptoJS.AES.decrypt(cipherParams, key128Bits1000Iterations, { mode: CryptoJS.mode.CBC, iv: iv, padding: CryptoJS.pad.Pkcs7 });
-      
+      // Decrypting the string contained in cipherParams using the PBKDF2 key
+      const decrypted = CryptoJS.AES.decrypt(cipherParams, key128Bits1000Iterations, { mode: CryptoJS.mode.CBC, iv, padding: CryptoJS.pad.Pkcs7 });
+
       const salt = AesUtil.decryptText(req.body.sKey);
       const hashObj = AesUtil.passToHash({ password: decrypted.toString(CryptoJS.enc.Utf8), salt });
       const encPass = AesUtil.encryptText(hashObj.hash);
@@ -325,16 +384,16 @@ module.exports = (Router, Service, App) => {
     // Data validation for process only request with all data
     if (req.body.email && req.body.password) {
       req.body.email = req.body.email.toLowerCase().trim();
-      Logger.warn('Register request for %s from %s', req.body.email, req.headers['x-forwarded-for'].split(",")[0] );
+      Logger.warn('Register request for %s from %s', req.body.email, req.headers['x-forwarded-for'].split(',')[0]);
 
-      let newUser = req.body;
+      const newUser = req.body;
 
       const { referral } = req.body;
       let hasReferral = false;
       let referrer = null;
-      try{
-        let existingUser = await Service.User.FindUserByEmail(req.body.email)
-        if(existingUser){
+      try {
+        const existingUser = await Service.User.FindUserByEmail(req.body.email);
+        if (existingUser) {
           return res.status(400).send({ message: 'User already exists' });
         }
       } catch (e) {
