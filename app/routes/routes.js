@@ -50,6 +50,10 @@ module.exports = (Router, Service, App) => {
   // Routes used by Storx Photos
   PhotosRoutes(Router, Service, App);
 
+  Router.get('/', (req, res) => {
+    return res.status(200).send({ sucess: 'Done' });
+  });
+
   Router.post('/login', (req, res) => {
     if (!req.body.email) {
       return res.status(400).send({ error: 'No email address specified' });
@@ -62,35 +66,44 @@ module.exports = (Router, Service, App) => {
     }
 
     // Call user service to find user
-    return Service.User.FindUserByEmail(req.body.email).then((userData) => {
-      if (!userData) {
-        // Wrong user
-        return res.status(400).json({ error: 'Wrong email/password' });
-      }
-
-      return Service.Storj.IsUserActivated(req.body.email).then((resActivation) => {
-        if (!resActivation.data.activated) {
-          res.status(400).send({ error: 'User is not activated' });
-        } else {
-          const encSalt = App.services.Crypt.encryptText(userData.hKey.toString());
-          const required2FA = userData.secret_2FA && userData.secret_2FA.length > 0;
-          Service.KeyServer.keysExists(userData).then((keyExist) => {
-            res.status(200).send({ hasKeys: keyExist, sKey: encSalt, tfa: required2FA });
-          });
+    return Service.User.FindUserByEmail(req.body.email)
+      .then((userData) => {
+        if (!userData) {
+          // Wrong user
+          return res.status(400).json({ error: 'Wrong email/password' });
         }
-      }).catch((err) => {
+
+        return Service.Storj.IsUserActivated(req.body.email)
+          .then((resActivation) => {
+            if (!resActivation.data.activated) {
+              res.status(400).send({ error: 'User is not activated' });
+            } else {
+              const encSalt = App.services.Crypt.encryptText(
+                userData.hKey.toString()
+              );
+              const required2FA =
+                userData.secret_2FA && userData.secret_2FA.length > 0;
+              Service.KeyServer.keysExists(userData).then((keyExist) => {
+                res
+                  .status(200)
+                  .send({ hasKeys: keyExist, sKey: encSalt, tfa: required2FA });
+              });
+            }
+          })
+          .catch((err) => {
+            res.status(400).send({
+              error: 'User not found on Bridge database',
+              message: err.response ? err.response.data : err,
+            });
+          });
+      })
+      .catch((err) => {
+        Logger.error(`${err}: ${req.body.email}`);
         res.status(400).send({
-          error: 'User not found on Bridge database',
-          message: err.response ? err.response.data : err
+          error: 'User not found on Cloud database',
+          message: err.message,
         });
       });
-    }).catch((err) => {
-      Logger.error(`${err}: ${req.body.email}`);
-      res.status(400).send({
-        error: 'User not found on Cloud database',
-        message: err.message
-      });
-    });
   });
 
   Router.post('/reset-password', async (req, res) => {
@@ -103,245 +116,322 @@ module.exports = (Router, Service, App) => {
           return res.status(400).send({
             error: 'Unauthorized',
             message: 'Invalid Token',
-            status: false
+            status: false,
           });
         }
 
-        const passwordUpdated = await Service.User.updateUserPassword({ ...user, id: userDetails.id });
+        const passwordUpdated = await Service.User.updateUserPassword({
+          ...user,
+          id: userDetails.id,
+        });
 
         if (passwordUpdated) {
           await Service.User.deleteUserToken(userDetails.id);
-          return res.status(200).send({ message: 'Password Updated Successfully', status: true });
+          return res
+            .status(200)
+            .send({ message: 'Password Updated Successfully', status: true });
         }
       }
-      return res.status(400).send({ message: 'You must provide password', status: false });
+      return res
+        .status(400)
+        .send({ message: 'You must provide password', status: false });
     } catch (e) {
-      return res.status(400).send({ message: 'Invalid Payload', status: false });
+      return res
+        .status(400)
+        .send({ message: 'Invalid Payload', status: false });
     }
   });
 
   Router.post('/send-email', (req, res) => {
     const passwordPayload = req.body;
 
-    return Service.User.FindUserByEmail(passwordPayload.email).then(async (userData) => {
-      if (!userData) {
-        // Wrong user
-        return res.status(400).json({ error: 'User Does not exist' });
-      }
-
-      try {
-        const token = await Service.User.CreateToken(userData.id);
-
-        const { data } = await Service.User.SendResetTokenToBridge({ token: token.token, email: userData.email });
-
-        if (data.emailSend) {
-          Logger.info('Email sent successfully');
-          return res.status(200).json({
-            status: true,
-            message: 'email sent successfully!'
-          });
+    return Service.User.FindUserByEmail(passwordPayload.email)
+      .then(async (userData) => {
+        if (!userData) {
+          // Wrong user
+          return res.status(400).json({ error: 'User Does not exist' });
         }
-      } catch (err) {
-        Logger.error('Error creating token: %s', err.message);
-        return res.send(500).json({ error: 'Error creating token' });
-      }
-    }).catch((e) => {
-      console.log(e);
-      return res.status(400).json({ error: 'User Does not exist' });
-    });
+
+        try {
+          const token = await Service.User.CreateToken(userData.id);
+
+          const { data } = await Service.User.SendResetTokenToBridge({
+            token: token.token,
+            email: userData.email,
+          });
+
+          if (data.emailSend) {
+            Logger.info('Email sent successfully');
+            return res.status(200).json({
+              status: true,
+              message: 'email sent successfully!',
+            });
+          }
+        } catch (err) {
+          Logger.error('Error creating token: %s', err.message);
+          return res.send(500).json({ error: 'Error creating token' });
+        }
+      })
+      .catch((e) => {
+        console.log(e);
+        return res.status(400).json({ error: 'User Does not exist' });
+      });
   });
 
   Router.post('/access', (req, res) => {
     const MAX_LOGIN_FAIL_ATTEMPTS = 5;
 
     // Call user service to find or create user
-    Service.User.FindUserByEmail(req.body.email).then(async (userData) => {
-      if (userData.errorLoginCount >= MAX_LOGIN_FAIL_ATTEMPTS) {
-        return res.status(500).send({ error: 'Your account has been blocked for security reasons. Please reach out to us' });
-      }
-
-      if (userData.registerCompleted == false) {
-        return res.status(400).send({ error: 'Please verify your email' });
-      }
-
-      // Process user data and answer API call
-      const pass = App.services.Crypt.decryptText(req.body.password);
-      // 2-Factor Auth. Verification
-      const needsTfa = userData.secret_2FA && userData.secret_2FA.length > 0;
-      let tfaResult = true;
-      if (needsTfa) {
-        tfaResult = speakeasy.totp.verifyDelta({
-          secret: userData.secret_2FA,
-          token: req.body.tfa,
-          encoding: 'base32',
-          window: 2
-        });
-      }
-      if (!tfaResult) {
-        return res.status(400).send({ error: 'Wrong 2-factor auth code' });
-      }
-
-      if (pass === userData.password.toString() && tfaResult) {
-        // Successfull login
-        const internxtClient = req.headers['storx-client'];
-        const token = passport.Sign(userData.email, App.config.get('secrets').JWT, internxtClient === 'drive-web');
-
-        Service.User.LoginFailed(req.body.email, false);
-        Service.User.UpdateAccountActivity(req.body.email);
-        const userBucket = await Service.User.GetUserBucket(userData);
-
-        const keyExists = await Service.KeyServer.keysExists(userData);
-
-        if (!keyExists && req.body.publicKey) {
-          await Service.KeyServer.addKeysLogin(userData, req.body.publicKey, req.body.privateKey, req.body.revocateKey);
-        }
-
-        const keys = await Service.KeyServer.getKeys(userData);
-        const hasTeams = !!(await Service.Team.getTeamByMember(req.body.email));
-
-        const user = {
-          email: req.body.email,
-          userId: userData.userId,
-          mnemonic: userData.mnemonic,
-          root_folder_id: userData.root_folder_id,
-          name: userData.name,
-          lastname: userData.lastname,
-          uuid: userData.uuid,
-          credit: userData.credit,
-          createdAt: userData.createdAt,
-          privateKey: keys ? keys.private_key : null,
-          publicKey: keys ? keys.public_key : null,
-          revocateKey: keys ? keys.revocation_key : null,
-          bucket: userBucket,
-          registerCompleted: userData.registerCompleted,
-          teams: hasTeams
-        };
-
-        const userTeam = null;
-        if (userTeam) {
-          const tokenTeam = passport.Sign(userTeam.bridge_user, App.config.get('secrets').JWT, internxtClient === 'drive-web');
-          return res.status(200).json({
-            user, token, userTeam, tokenTeam
+    Service.User.FindUserByEmail(req.body.email)
+      .then(async (userData) => {
+        if (userData.errorLoginCount >= MAX_LOGIN_FAIL_ATTEMPTS) {
+          return res.status(500).send({
+            error:
+              'Your account has been blocked for security reasons. Please reach out to us',
           });
         }
-        return res.status(200).json({ user, token, userTeam });
-      }
-      // Wrong password
-      if (pass !== userData.password.toString()) {
-        Service.User.LoginFailed(req.body.email, true);
-      }
 
-      return res.status(400).json({ error: 'Wrong email/password' });
-    }).catch((err) => {
-      Logger.error(`${err.message}\n${err.stack}`);
-      return res.status(400).send({ error: 'User not found on Cloud database', message: err.message });
-    });
+        if (userData.registerCompleted == false) {
+          return res.status(400).send({ error: 'Please verify your email' });
+        }
+
+        // Process user data and answer API call
+        const pass = App.services.Crypt.decryptText(req.body.password);
+        // 2-Factor Auth. Verification
+        const needsTfa = userData.secret_2FA && userData.secret_2FA.length > 0;
+        let tfaResult = true;
+        if (needsTfa) {
+          tfaResult = speakeasy.totp.verifyDelta({
+            secret: userData.secret_2FA,
+            token: req.body.tfa,
+            encoding: 'base32',
+            window: 2,
+          });
+        }
+        if (!tfaResult) {
+          return res.status(400).send({ error: 'Wrong 2-factor auth code' });
+        }
+
+        if (pass === userData.password.toString() && tfaResult) {
+          // Successfull login
+          const internxtClient = req.headers['storx-client'];
+          const token = passport.Sign(
+            userData.email,
+            App.config.get('secrets').JWT,
+            internxtClient === 'drive-web'
+          );
+
+          Service.User.LoginFailed(req.body.email, false);
+          Service.User.UpdateAccountActivity(req.body.email);
+          const userBucket = await Service.User.GetUserBucket(userData);
+
+          const keyExists = await Service.KeyServer.keysExists(userData);
+
+          if (!keyExists && req.body.publicKey) {
+            await Service.KeyServer.addKeysLogin(
+              userData,
+              req.body.publicKey,
+              req.body.privateKey,
+              req.body.revocateKey
+            );
+          }
+
+          const keys = await Service.KeyServer.getKeys(userData);
+          const hasTeams = !!(await Service.Team.getTeamByMember(
+            req.body.email
+          ));
+
+          const user = {
+            email: req.body.email,
+            userId: userData.userId,
+            mnemonic: userData.mnemonic,
+            root_folder_id: userData.root_folder_id,
+            name: userData.name,
+            lastname: userData.lastname,
+            uuid: userData.uuid,
+            credit: userData.credit,
+            createdAt: userData.createdAt,
+            privateKey: keys ? keys.private_key : null,
+            publicKey: keys ? keys.public_key : null,
+            revocateKey: keys ? keys.revocation_key : null,
+            bucket: userBucket,
+            registerCompleted: userData.registerCompleted,
+            teams: hasTeams,
+          };
+
+          const userTeam = null;
+          if (userTeam) {
+            const tokenTeam = passport.Sign(
+              userTeam.bridge_user,
+              App.config.get('secrets').JWT,
+              internxtClient === 'drive-web'
+            );
+            return res.status(200).json({
+              user,
+              token,
+              userTeam,
+              tokenTeam,
+            });
+          }
+          return res.status(200).json({ user, token, userTeam });
+        }
+        // Wrong password
+        if (pass !== userData.password.toString()) {
+          Service.User.LoginFailed(req.body.email, true);
+        }
+
+        return res.status(400).json({ error: 'Wrong email/password' });
+      })
+      .catch((err) => {
+        Logger.error(`${err.message}\n${err.stack}`);
+        return res.status(400).send({
+          error: 'User not found on Cloud database',
+          message: err.message,
+        });
+      });
   });
 
   Router.post('/access_core', (req, res) => {
     const MAX_LOGIN_FAIL_ATTEMPTS = 5;
 
     // Call user service to find or create user
-    Service.User.FindUserByEmail(req.body.email).then(async (userData) => {
-      if (userData.errorLoginCount >= MAX_LOGIN_FAIL_ATTEMPTS) {
-        return res.status(500).send({ error: 'Your account has been blocked for security reasons. Please reach out to us' });
-      }
-
-      if (userData.registerCompleted == false) {
-        return res.status(400).send({ error: 'Please verify your email' });
-      }
-      // Creating the Vector Key, this will come from env.REACT_APP_MAGIC_IV
-      const iv = CryptoJS.enc.Hex.parse(process.env.MAGIC_IV);
-      // Encoding the Password in from UTF8 to byte array, this will we use env.APP_SEGMENT_KEY
-      const Pass = CryptoJS.enc.Utf8.parse(process.env.APP_SEGMENT_KEY);
-      // Encoding the Salt in from UTF8 to byte array, this will come from env.MAGIC_SALT
-      const Salt = CryptoJS.enc.Utf8.parse(process.env.MAGIC_SALT);
-      // Creating the key in PBKDF2 format to be used during the decryption
-      const key128Bits1000Iterations = CryptoJS.PBKDF2(Pass.toString(CryptoJS.enc.Utf8), Salt, { keySize: 128 / 32, iterations: 1000 });
-      // Enclosing the test to be decrypted in a CipherParams object as supported by the CryptoJS libarary, this will come from body.password
-      const cipherParams = CryptoJS.lib.CipherParams.create({
-        ciphertext: CryptoJS.enc.Hex.parse(req.body.password)
-      });
-
-      // Decrypting the string contained in cipherParams using the PBKDF2 key
-      const decrypted = CryptoJS.AES.decrypt(cipherParams, key128Bits1000Iterations, { mode: CryptoJS.mode.CBC, iv, padding: CryptoJS.pad.Pkcs7 });
-
-      const salt = AesUtil.decryptText(req.body.sKey);
-      const hashObj = AesUtil.passToHash({ password: decrypted.toString(CryptoJS.enc.Utf8), salt });
-      const encPass = AesUtil.encryptText(hashObj.hash);
-      // console.log("decrypted.toString(CryptoJS.enc.Utf8)",decrypted.toString(CryptoJS.enc.Utf8));
-      // Process user data and answer API call
-      const pass = App.services.Crypt.decryptText(encPass);
-      // 2-Factor Auth. Verification
-      const needsTfa = userData.secret_2FA && userData.secret_2FA.length > 0;
-      let tfaResult = true;
-      if (needsTfa) {
-        tfaResult = speakeasy.totp.verifyDelta({
-          secret: userData.secret_2FA,
-          token: req.body.tfa,
-          encoding: 'base32',
-          window: 2
-        });
-      }
-      if (!tfaResult) {
-        return res.status(400).send({ error: 'Wrong 2-factor auth code' });
-      }
-
-      if (pass === userData.password.toString() && tfaResult) {
-        // Successfull login
-        const internxtClient = req.headers['storx-client'];
-        const token = passport.Sign(userData.email, App.config.get('secrets').JWT, internxtClient === 'drive-web');
-
-        Service.User.LoginFailed(req.body.email, false);
-        Service.User.UpdateAccountActivity(req.body.email);
-        const userBucket = await Service.User.GetUserBucket(userData);
-
-        const keyExists = await Service.KeyServer.keysExists(userData);
-
-        if (!keyExists && req.body.publicKey) {
-          await Service.KeyServer.addKeysLogin(userData, req.body.publicKey, req.body.privateKey, req.body.revocateKey);
-        }
-
-        const keys = await Service.KeyServer.getKeys(userData);
-        const hasTeams = !!(await Service.Team.getTeamByMember(req.body.email));
-
-        const user = {
-          email: req.body.email,
-          userId: userData.userId,
-          mnemonic: userData.mnemonic,
-          root_folder_id: userData.root_folder_id,
-          name: userData.name,
-          lastname: userData.lastname,
-          uuid: userData.uuid,
-          credit: userData.credit,
-          createdAt: userData.createdAt,
-          privateKey: keys ? keys.private_key : null,
-          publicKey: keys ? keys.public_key : null,
-          revocateKey: keys ? keys.revocation_key : null,
-          bucket: userBucket,
-          registerCompleted: userData.registerCompleted,
-          teams: hasTeams
-        };
-
-        const userTeam = null;
-        if (userTeam) {
-          const tokenTeam = passport.Sign(userTeam.bridge_user, App.config.get('secrets').JWT, internxtClient === 'drive-web');
-          return res.status(200).json({
-            user, token, userTeam, tokenTeam
+    Service.User.FindUserByEmail(req.body.email)
+      .then(async (userData) => {
+        if (userData.errorLoginCount >= MAX_LOGIN_FAIL_ATTEMPTS) {
+          return res.status(500).send({
+            error:
+              'Your account has been blocked for security reasons. Please reach out to us',
           });
         }
-        return res.status(200).json({ user, token, userTeam });
-      }
-      // Wrong password
-      if (pass !== userData.password.toString()) {
-        Service.User.LoginFailed(req.body.email, true);
-      }
 
-      return res.status(400).json({ error: 'Wrong email/password' });
-    }).catch((err) => {
-      Logger.error(`${err.message}\n${err.stack}`);
-      return res.status(400).send({ error: 'User not found on Cloud database', message: err.message });
-    });
+        if (userData.registerCompleted == false) {
+          return res.status(400).send({ error: 'Please verify your email' });
+        }
+        // Creating the Vector Key, this will come from env.REACT_APP_MAGIC_IV
+        const iv = CryptoJS.enc.Hex.parse(process.env.MAGIC_IV);
+        // Encoding the Password in from UTF8 to byte array, this will we use env.APP_SEGMENT_KEY
+        const Pass = CryptoJS.enc.Utf8.parse(process.env.APP_SEGMENT_KEY);
+        // Encoding the Salt in from UTF8 to byte array, this will come from env.MAGIC_SALT
+        const Salt = CryptoJS.enc.Utf8.parse(process.env.MAGIC_SALT);
+        // Creating the key in PBKDF2 format to be used during the decryption
+        const key128Bits1000Iterations = CryptoJS.PBKDF2(
+          Pass.toString(CryptoJS.enc.Utf8),
+          Salt,
+          { keySize: 128 / 32, iterations: 1000 }
+        );
+        // Enclosing the test to be decrypted in a CipherParams object as supported by the CryptoJS libarary, this will come from body.password
+        const cipherParams = CryptoJS.lib.CipherParams.create({
+          ciphertext: CryptoJS.enc.Hex.parse(req.body.password),
+        });
+
+        // Decrypting the string contained in cipherParams using the PBKDF2 key
+        const decrypted = CryptoJS.AES.decrypt(
+          cipherParams,
+          key128Bits1000Iterations,
+          { mode: CryptoJS.mode.CBC, iv, padding: CryptoJS.pad.Pkcs7 }
+        );
+
+        const salt = AesUtil.decryptText(req.body.sKey);
+        const hashObj = AesUtil.passToHash({
+          password: decrypted.toString(CryptoJS.enc.Utf8),
+          salt,
+        });
+        const encPass = AesUtil.encryptText(hashObj.hash);
+        // console.log("decrypted.toString(CryptoJS.enc.Utf8)",decrypted.toString(CryptoJS.enc.Utf8));
+        // Process user data and answer API call
+        const pass = App.services.Crypt.decryptText(encPass);
+        // 2-Factor Auth. Verification
+        const needsTfa = userData.secret_2FA && userData.secret_2FA.length > 0;
+        let tfaResult = true;
+        if (needsTfa) {
+          tfaResult = speakeasy.totp.verifyDelta({
+            secret: userData.secret_2FA,
+            token: req.body.tfa,
+            encoding: 'base32',
+            window: 2,
+          });
+        }
+        if (!tfaResult) {
+          return res.status(400).send({ error: 'Wrong 2-factor auth code' });
+        }
+
+        if (pass === userData.password.toString() && tfaResult) {
+          // Successfull login
+          const internxtClient = req.headers['storx-client'];
+          const token = passport.Sign(
+            userData.email,
+            App.config.get('secrets').JWT,
+            internxtClient === 'drive-web'
+          );
+
+          Service.User.LoginFailed(req.body.email, false);
+          Service.User.UpdateAccountActivity(req.body.email);
+          const userBucket = await Service.User.GetUserBucket(userData);
+
+          const keyExists = await Service.KeyServer.keysExists(userData);
+
+          if (!keyExists && req.body.publicKey) {
+            await Service.KeyServer.addKeysLogin(
+              userData,
+              req.body.publicKey,
+              req.body.privateKey,
+              req.body.revocateKey
+            );
+          }
+
+          const keys = await Service.KeyServer.getKeys(userData);
+          const hasTeams = !!(await Service.Team.getTeamByMember(
+            req.body.email
+          ));
+
+          const user = {
+            email: req.body.email,
+            userId: userData.userId,
+            mnemonic: userData.mnemonic,
+            root_folder_id: userData.root_folder_id,
+            name: userData.name,
+            lastname: userData.lastname,
+            uuid: userData.uuid,
+            credit: userData.credit,
+            createdAt: userData.createdAt,
+            privateKey: keys ? keys.private_key : null,
+            publicKey: keys ? keys.public_key : null,
+            revocateKey: keys ? keys.revocation_key : null,
+            bucket: userBucket,
+            registerCompleted: userData.registerCompleted,
+            teams: hasTeams,
+          };
+
+          const userTeam = null;
+          if (userTeam) {
+            const tokenTeam = passport.Sign(
+              userTeam.bridge_user,
+              App.config.get('secrets').JWT,
+              internxtClient === 'drive-web'
+            );
+            return res.status(200).json({
+              user,
+              token,
+              userTeam,
+              tokenTeam,
+            });
+          }
+          return res.status(200).json({ user, token, userTeam });
+        }
+        // Wrong password
+        if (pass !== userData.password.toString()) {
+          Service.User.LoginFailed(req.body.email, true);
+        }
+
+        return res.status(400).json({ error: 'Wrong email/password' });
+      })
+      .catch((err) => {
+        Logger.error(`${err.message}\n${err.stack}`);
+        return res.status(400).send({
+          error: 'User not found on Cloud database',
+          message: err.message,
+        });
+      });
   });
 
   Router.get('/user/refresh', passportAuth, async (req, res) => {
@@ -350,16 +440,23 @@ module.exports = (Router, Service, App) => {
     const keyExists = await Service.KeyServer.keysExists(userData);
 
     if (!keyExists && req.body.publicKey) {
-      await Service.KeyServer.addKeysLogin(userData, req.body.publicKey, req.body.privateKey, req.body.revocateKey);
+      await Service.KeyServer.addKeysLogin(
+        userData,
+        req.body.publicKey,
+        req.body.privateKey,
+        req.body.revocateKey
+      );
     }
 
     const keys = await Service.KeyServer.getKeys(userData);
     const userBucket = await Service.User.GetUserBucket(userData);
 
     const internxtClient = req.headers['storx-client'];
-    const token = passport.Sign(userData.email,
+    const token = passport.Sign(
+      userData.email,
       App.config.get('secrets').JWT,
-      internxtClient === 'x-cloud-web' || internxtClient === 'drive-web');
+      internxtClient === 'x-cloud-web' || internxtClient === 'drive-web'
+    );
 
     const user = {
       userId: userData.userId,
@@ -373,10 +470,11 @@ module.exports = (Router, Service, App) => {
       privateKey: keys ? keys.private_key : null,
       publicKey: keys ? keys.public_key : null,
       revocateKey: keys ? keys.revocation_key : null,
-      bucket: userBucket
+      bucket: userBucket,
     };
     res.status(200).json({
-      user, token
+      user,
+      token,
     });
   });
 
@@ -384,7 +482,11 @@ module.exports = (Router, Service, App) => {
     // Data validation for process only request with all data
     if (req.body.email && req.body.password) {
       req.body.email = req.body.email.toLowerCase().trim();
-      Logger.warn('Register request for %s from %s', req.body.email, req.headers['x-forwarded-for'].split(',')[0]);
+      Logger.warn(
+        'Register request for %s from %s',
+        req.body.email,
+        req.headers['x-forwarded-for'].split(',')[0]
+      );
 
       const newUser = req.body;
 
@@ -396,9 +498,7 @@ module.exports = (Router, Service, App) => {
         if (existingUser) {
           return res.status(400).send({ message: 'User already exists' });
         }
-      } catch (e) {
-
-      }
+      } catch (e) {}
 
       // Call user service to find or create user
       const userData = await Service.User.FindOrCreate(newUser);
@@ -408,25 +508,30 @@ module.exports = (Router, Service, App) => {
       }
 
       if (referral != 'undefined') {
-        await Service.User.FindUserByUuid(referral).then((referalUser) => {
-          if (referalUser) {
-            newUser.credit = 10;
-            hasReferral = true;
-            referrer = referalUser;
-            Service.User.UpdateCredit(referral);
-            Service.User.UpdateCredit(userData.dataValues.uuid);
-          }
-        }).catch(() => { });
+        await Service.User.FindUserByUuid(referral)
+          .then((referalUser) => {
+            if (referalUser) {
+              newUser.credit = 10;
+              hasReferral = true;
+              referrer = referalUser;
+              Service.User.UpdateCredit(referral);
+              Service.User.UpdateCredit(userData.dataValues.uuid);
+            }
+          })
+          .catch(() => {});
 
         if (hasReferral) {
           Service.Analytics.identify({
             userId: userData.uuid,
-            traits: { referred_by: referrer.uuid }
+            traits: { referred_by: referrer.uuid },
           });
         }
 
         // Successfull register
-        const token = passport.Sign(userData.email, App.config.get('secrets').JWT);
+        const token = passport.Sign(
+          userData.email,
+          App.config.get('secrets').JWT
+        );
 
         const user = {
           userId: userData.userId,
@@ -438,7 +543,7 @@ module.exports = (Router, Service, App) => {
           credit: userData.credit,
           createdAt: userData.createdAt,
           registerCompleted: userData.registerCompleted,
-          email: userData.email
+          email: userData.email,
         };
 
         try {
@@ -455,56 +560,81 @@ module.exports = (Router, Service, App) => {
       // This account already exists
       return res.status(200).send({ message: 'Please check mail' });
     }
-    return res.status(400).send({ message: 'You must provide registration data' });
+    return res
+      .status(400)
+      .send({ message: 'You must provide registration data' });
   });
 
   Router.post('/initialize', (req, res) => {
     // Call user service to find or create user
-    Service.User.InitializeUser(req.body).then(async (userData) => {
-      // Process user data and answer API call
-      if (userData.root_folder_id) {
-        // Successfull initialization
-        const user = {
-          email: userData.email,
-          mnemonic: userData.mnemonic,
-          root_folder_id: userData.root_folder_id
-        };
+    Service.User.InitializeUser(req.body)
+      .then(async (userData) => {
+        // Process user data and answer API call
+        if (userData.root_folder_id) {
+          // Successfull initialization
+          const user = {
+            email: userData.email,
+            mnemonic: userData.mnemonic,
+            root_folder_id: userData.root_folder_id,
+          };
 
-        try {
-          const familyFolder = await Service.Folder.Create(userData, 'Business', user.root_folder_id);
-          const personalFolder = await Service.Folder.Create(userData, 'Personal', user.root_folder_id);
-          personalFolder.iconId = 1;
-          personalFolder.color = 'pink';
-          familyFolder.iconId = 18;
-          familyFolder.color = 'yellow';
-          await personalFolder.save();
-          await familyFolder.save();
-        } catch (e) {
-          Logger.error('Cannot initialize welcome folders: %s', e.message);
-        } finally {
-          res.status(200).send({ user });
+          try {
+            const familyFolder = await Service.Folder.Create(
+              userData,
+              'Business',
+              user.root_folder_id
+            );
+            const personalFolder = await Service.Folder.Create(
+              userData,
+              'Personal',
+              user.root_folder_id
+            );
+            personalFolder.iconId = 1;
+            personalFolder.color = 'pink';
+            familyFolder.iconId = 18;
+            familyFolder.color = 'yellow';
+            await personalFolder.save();
+            await familyFolder.save();
+          } catch (e) {
+            Logger.error('Cannot initialize welcome folders: %s', e.message);
+          } finally {
+            res.status(200).send({ user });
+          }
+        } else {
+          // User initialization unsuccessful
+          res
+            .status(400)
+            .send({ message: "Your account can't be initialized" });
         }
-      } else {
-        // User initialization unsuccessful
-        res.status(400).send({ message: 'Your account can\'t be initialized' });
-      }
-    }).catch((err) => {
-      Logger.error(`${err.message}\n${err.stack}`);
-      res.send(err.message);
-    });
+      })
+      .catch((err) => {
+        Logger.error(`${err.message}\n${err.stack}`);
+        res.send(err.message);
+      });
   });
 
   Router.patch('/user/password', passportAuth, (req, res) => {
-    const currentPassword = App.services.Crypt.decryptText(req.body.currentPassword);
+    const currentPassword = App.services.Crypt.decryptText(
+      req.body.currentPassword
+    );
     const newPassword = App.services.Crypt.decryptText(req.body.newPassword);
     const newSalt = App.services.Crypt.decryptText(req.body.newSalt);
     const { mnemonic, privateKey } = req.body;
 
-    Service.User.UpdatePasswordMnemonic(req.user, currentPassword, newPassword, newSalt, mnemonic, privateKey).then(() => {
-      res.status(200).send({});
-    }).catch((err) => {
-      res.status(500).send({ error: err.message });
-    });
+    Service.User.UpdatePasswordMnemonic(
+      req.user,
+      currentPassword,
+      newPassword,
+      newSalt,
+      mnemonic,
+      privateKey
+    )
+      .then(() => {
+        res.status(200).send({});
+      })
+      .catch((err) => {
+        res.status(500).send({ error: err.message });
+      });
   });
 
   Router.post('/user/claim', passportAuth, (req, res) => {
@@ -513,14 +643,20 @@ module.exports = (Router, Service, App) => {
       to: 'support@storx.tech',
       from: 'support@storx.tech',
       subject: 'New credit request',
-      text: `Hello StorX! I am ready to receive my credit for referring friends. My email is ${req.user.email}`
+      text: `Hello StorX! I am ready to receive my credit for referring friends. My email is ${req.user.email}`,
     };
     if (req.user.credit > 0) {
-      analytics.track({ userId: req.user.uuid, event: 'user-referral-claim', properties: { credit: req.user.credit } });
+      analytics.track({
+        userId: req.user.uuid,
+        event: 'user-referral-claim',
+        properties: { credit: req.user.credit },
+      });
       sgMail
-        .send(msg).then(() => {
+        .send(msg)
+        .then(() => {
           res.status(200).send({});
-        }).catch((err) => {
+        })
+        .catch((err) => {
           res.status(500).send(err);
         });
     } else {
@@ -531,23 +667,44 @@ module.exports = (Router, Service, App) => {
   Router.post('/user/invite', passportAuth, (req, res) => {
     const { email } = req.body;
 
-    Service.User.FindUserObjByEmail(email).then((user) => {
-      if (user === null) {
-        Service.Mail.sendInvitationMail(email, req.user).then(() => {
-          Logger.info('User %s send invitation to %s', req.user.email, req.body.email);
+    Service.User.FindUserObjByEmail(email)
+      .then((user) => {
+        if (user === null) {
+          Service.Mail.sendInvitationMail(email, req.user)
+            .then(() => {
+              Logger.info(
+                'User %s send invitation to %s',
+                req.user.email,
+                req.body.email
+              );
+              res.status(200).send({});
+            })
+            .catch((e) => {
+              Logger.error(
+                'Error: Send mail from %s to %s',
+                req.user.email,
+                req.body.email
+              );
+              res.status(200).send({});
+            });
+        } else {
+          Logger.warn(
+            'Error: Send mail from %s to %s, already registered',
+            req.user.email,
+            req.body.email
+          );
           res.status(200).send({});
-        }).catch((e) => {
-          Logger.error('Error: Send mail from %s to %s', req.user.email, req.body.email);
-          res.status(200).send({});
-        });
-      } else {
-        Logger.warn('Error: Send mail from %s to %s, already registered', req.user.email, req.body.email);
+        }
+      })
+      .catch((err) => {
+        Logger.error(
+          'Error: Send mail from %s to %s, SMTP error',
+          req.user.email,
+          req.body.email,
+          err.message
+        );
         res.status(200).send({});
-      }
-    }).catch((err) => {
-      Logger.error('Error: Send mail from %s to %s, SMTP error', req.user.email, req.body.email, err.message);
-      res.status(200).send({});
-    });
+      });
   });
 
   Router.get('/user/credit', passportAuth, (req, res) => {
@@ -571,7 +728,7 @@ module.exports = (Router, Service, App) => {
     } else {
       const { publicKeyArmored } = await openpgp.generateKey({
         userIds: [{ email: 'inxt@inxt.com' }],
-        curve: 'ed25519'
+        curve: 'ed25519',
       });
       const codpublicKey = Buffer.from(publicKeyArmored).toString('base64');
       res.status(200).send({ publicKey: codpublicKey });
