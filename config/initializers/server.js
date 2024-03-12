@@ -26,7 +26,7 @@ class Server {
     this.logger.info(`Starting Server on port ${port}`);
     this.logger.info(`Environment: "${process.env.NODE_ENV}"`);
     this.instance = this.express.listen(port, '0.0.0.0', callback);
-    this.instance.timeout = 240000
+    this.instance.timeout = 240000;
     this.initDatabase();
 
     process.on('SIGINT', this.handleSIGINT.bind(this));
@@ -49,7 +49,9 @@ class Server {
 
   handleSIGINT() {
     const { logger } = this;
-    logger.info('Server received shutdown request, waiting for pending requests');
+    logger.info(
+      'Server received shutdown request, waiting for pending requests'
+    );
     this.instance.close(() => {
       logger.info('Finished all requests');
       process.exitCode = 0;

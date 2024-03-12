@@ -21,7 +21,7 @@ module.exports = (App, Config) => {
     if (req.user && req.user.email) {
       return req.user.email;
     }
-    let ipArr = req.headers['x-forwarded-for'].split(",");
+    const ipArr = req.headers['x-forwarded-for'].split(',');
     return ipArr[0] || req.ip;
   };
 
@@ -47,24 +47,40 @@ module.exports = (App, Config) => {
   }));
 
   App.express.use('/api/register', rateLimit({
-    windowMs: 10 * 1000, max: 1,
+    windowMs: 10 * 1000,
+    max: 1,
     keyGenerator: limiterKeyGenerator
-  }))
+  }));
 
   App.express.use('/api/login', rateLimit({
-    windowMs: 2 * 60 * 1000, max: 25,
+    windowMs: 2 * 60 * 1000,
+    max: 25,
     keyGenerator: limiterKeyGenerator
-  }))
+  }));
+
+  App.express.use('/api/reset-password', rateLimit({
+    windowMs: 2 * 60 * 1000,
+    max: 25,
+    keyGenerator: limiterKeyGenerator
+  }));
+
+  App.express.use('/api/send-email', rateLimit({
+    windowMs: 2 * 60 * 1000,
+    max: 25,
+    keyGenerator: limiterKeyGenerator
+  }));
 
   App.express.use('/api/limit', rateLimit({
-    windowMs: 2 * 60 * 1000, max: 25,
+    windowMs: 2 * 60 * 1000,
+    max: 25,
     keyGenerator: limiterKeyGenerator
-  }))
+  }));
 
   App.express.use('/api/usage', rateLimit({
-    windowMs: 2 * 60 * 1000, max: 25,
+    windowMs: 2 * 60 * 1000,
+    max: 25,
     keyGenerator: limiterKeyGenerator
-  }))
+  }));
 
   App.express.use('/api/user/resend', rateLimit({
     windowMs: 10 * 1000,
@@ -106,8 +122,7 @@ module.exports = (App, Config) => {
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     preflightContinue: false
-  })
-  );
+  }));
 
   App.express.use(bodyParser.json());
 
@@ -147,8 +162,7 @@ module.exports = (App, Config) => {
     App.services.User.FindUserObjByEmail(email).then((user) => done(null, user)).catch((err) => {
       done(err);
     });
-  })
-  );
+  }));
 
   /**
    * Logger middleware.
