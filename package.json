@@ -54,7 +54,7 @@
     "winston": "^3.2.1"
   },
   "scripts": {
-    "start": "pm2 start app.js --name API -i 3",
+    "start": "pm2 start app.js --node-args=\"--max-old-space-size=4096\" --name API",
     "dev": "cross-env NODE_ENV=development nodemon",
     "testsuite": "cross-env NODE_ENV=test mocha test/**/*.js",
     "test": "npm run lint && npm run testsuite",
